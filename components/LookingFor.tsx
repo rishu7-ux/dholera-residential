@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
+
 import {
   FaBuilding,
   FaHome,
@@ -13,127 +15,250 @@ const services = [
   {
     title: "Commercial Plot",
     description:
-      "Commercial Plot, one home at a time. Founded with a vision to contribute to India's next-generation industrial revolution.",
-    icon: <FaBuilding size={46} />,
+      "Prime commercial plots for business and investment in Dholera.",
+    icon: FaBuilding,
+    href: "/properties",
   },
   {
     title: "Residential Plot",
     description:
-      "Residential Plot, one home at a time. Founded with a vision to contribute to India's next-generation industrial revolution.",
-    icon: <FaHome size={46} />,
+      "Well-planned residential plots with strong future growth.",
+    icon: FaHome,
+    href: "/properties",
   },
   {
     title: "Industrial Plot",
     description:
-      "Industrial Plot, one home at a time. Founded with a vision to contribute to India's next-generation industrial revolution.",
-    icon: <FaIndustry size={46} />,
+      "Industrial land near major infrastructure and growth zones.",
+    icon: FaIndustry,
+    href: "/properties",
   },
   {
     title: "Logistic Plot",
     description:
-      "Logistic Plot, one home at a time. Founded with a vision to contribute to India's next-generation industrial revolution.",
-    icon: <FaStore size={46} />,
+      "Logistics plots with strong connectivity to key corridors.",
+    icon: FaStore,
+    href: "/properties",
   },
 ];
 
+const cardVariants = {
+  hidden: {
+    opacity: 0,
+    y: 20,
+    scale: 0.96,
+  },
+
+  visible: (index: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+
+    transition: {
+      delay: index * 0.08,
+      duration: 0.45,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  }),
+};
+
 export default function LookingFor() {
   return (
-    <section className="bg-[#F8FAFC] py-20">
-      <div className="mx-auto max-w-7xl px-5">
+    <section className="bg-[#F8FAFC] py-12 sm:py-16 lg:py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
-        {/* Heading */}
+        {/* HEADER */}
 
-        <div className="mb-16">
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 18,
+          }}
+          whileInView={{
+            opacity: 1,
+            y: 0,
+          }}
+          viewport={{
+            once: true,
+          }}
+          transition={{
+            duration: 0.5,
+          }}
+          className="mb-8"
+        >
+          <div className="mb-3 flex items-center gap-3">
+            <span className="h-0.5 w-8 bg-[#FF7A00]" />
 
-          <h2 className="text-3xl font-light text-[#081A3A] md:text-5xl">
-            What Are You Looking For
-          </h2>
-
-          <p className="mt-4 max-w-3xl text-lg text-gray-600">
-            Founded with a vision to contribute to India&apos;s next-generation
-            industrial revolution.
-          </p>
-
-          <div className="mt-5 flex gap-2">
-            {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <span
-                key={i}
-                className="h-2 w-2 rounded-full bg-[#FF7A00]"
-              />
-            ))}
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#FF7A00] sm:text-xs">
+              Property Categories
+            </span>
           </div>
 
-        </div>
+          <h2 className="text-3xl font-extrabold leading-tight text-[#081A3A] sm:text-4xl lg:text-5xl">
+            What Are You{" "}
+            <span className="text-[#FF7A00]">
+              Looking For
+            </span>
+          </h2>
 
-        {/* Cards */}
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600 sm:text-base">
+            Explore the right property category for your investment in Dholera.
+          </p>
+        </motion.div>
 
-        <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
+        {/* CUBE CARDS */}
 
-          {services.map((item, index) => (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+          {services.map((item, index) => {
+            const Icon = item.icon;
 
-            <div
-              key={index}
-              className="group rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-lg transition-all duration-500 hover:-translate-y-3 hover:border-transparent hover:bg-linear-to-r hover:from-[#0A2E73] hover:to-[#2563EB] hover:shadow-2xl"
-            >
+            return (
+              <motion.article
+                key={item.title}
+                custom={index}
+                variants={cardVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{
+                  once: true,
+                  amount: 0.2,
+                }}
+                whileHover={{
+                  y: -5,
+                  scale: 1.02,
+                }}
+                className="
+                  group
+                  relative
+                  aspect-square
+                  overflow-hidden
+                  rounded-[18px]
+                  border
+                  border-[#E7EAF0]
+                  bg-white
+                  p-4
+                  shadow-[0_6px_18px_rgba(8,26,58,0.06)]
+                  transition-all
+                  duration-300
 
-              {/* Icon */}
+                  hover:border-[#FF7A00]/40
+                  hover:shadow-[0_14px_30px_rgba(255,122,0,0.12)]
 
-              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#FFF4EC] text-[#FF7A00] transition-all duration-500 group-hover:bg-white/15 group-hover:text-white">
-
-                {item.icon}
-
-              </div>
-
-              {/* Title */}
-
-              <h3 className="mb-4 text-2xl font-bold text-[#081A3A] transition-all duration-300 group-hover:text-white">
-
-                {item.title}
-
-              </h3>
-
-              {/* Description */}
-
-              <p className="mb-8 leading-8 text-gray-600 transition-all duration-300 group-hover:text-white">
-
-                {item.description}
-
-              </p>
-
-              {/* Read More */}
-
-              <Link
-                href="#"
-                className="inline-flex items-center gap-2 font-semibold text-[#FF7A00] transition-all duration-500 group-hover:text-white"
+                  sm:p-5
+                "
               >
-                Read More
+                {/* TOP ACCENT */}
 
-                <FaArrowRight className="transition-transform duration-500 group-hover:translate-x-2" />
+                <span className="absolute left-0 top-0 h-0.75 w-10 bg-[#FF7A00] transition-all duration-300 group-hover:w-full" />
 
-              </Link>
+                {/* ICON */}
 
-            </div>
+                <div
+                  className="
+                    flex
+                    h-10
+                    w-10
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-[#FFF1E5]
+                    text-lg
+                    text-[#FF7A00]
+                    transition-all
+                    duration-300
 
-          ))}
+                    group-hover:bg-[#FF7A00]
+                    group-hover:text-white
 
+                    sm:h-12
+                    sm:w-12
+                    sm:text-xl
+                  "
+                >
+                  <Icon />
+                </div>
+
+                {/* TITLE */}
+
+                <h3 className="mt-4 text-[15px] font-extrabold leading-5 text-[#081A3A] transition-colors duration-300 group-hover:text-[#FF7A00] sm:text-lg">
+                  {item.title}
+                </h3>
+
+                {/* LINE */}
+
+                <span className="mt-2 block h-0.5 w-7 bg-[#FF7A00] transition-all duration-300 group-hover:w-12" />
+
+                {/* DESCRIPTION */}
+
+                <p className="mt-3 line-clamp-3 text-[11px] leading-5 text-gray-500 sm:text-xs">
+                  {item.description}
+                </p>
+
+                {/* READ MORE */}
+
+                <Link
+                  href={item.href}
+                  className="
+                    absolute
+                    bottom-4
+                    left-4
+                    inline-flex
+                    items-center
+                    gap-1.5
+                    text-[11px]
+                    font-bold
+                    text-[#081A3A]
+                    transition-colors
+                    duration-300
+
+                    hover:text-[#FF7A00]
+
+                    sm:bottom-5
+                    sm:left-5
+                    sm:text-xs
+                  "
+                >
+                  Read More
+
+                  <FaArrowRight className="text-[9px]" />
+                </Link>
+
+                {/* BOTTOM ACCENT */}
+
+                <span className="absolute bottom-0 left-0 h-0.75 w-0 bg-[#FF7A00] transition-all duration-300 group-hover:w-full" />
+              </motion.article>
+            );
+          })}
         </div>
 
-        {/* Button */}
+        {/* BUTTON */}
 
-        <div className="mt-16 flex justify-center">
-
+        <div className="mt-8 flex justify-center">
           <Link
             href="/properties"
-            className="inline-flex items-center gap-3 rounded-lg bg-[#FF7A00] px-10 py-4 text-lg font-semibold text-white transition-all duration-300 hover:bg-[#0A2E73]"
+            className="
+              inline-flex
+              items-center
+              gap-2
+              rounded-lg
+              bg-[#FF7A00]
+              px-5
+              py-3
+              text-sm
+              font-bold
+              text-white
+              transition-all
+              duration-300
+
+              hover:-translate-y-1
+              hover:bg-[#0A2E73]
+            "
           >
-            Read More
+            Explore Properties
 
-            <FaArrowRight />
-
+            <FaArrowRight className="text-xs" />
           </Link>
-
         </div>
-
       </div>
     </section>
   );

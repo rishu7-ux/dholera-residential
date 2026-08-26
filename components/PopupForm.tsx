@@ -1,189 +1,1701 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  AnimatePresence,
+  motion,
+} from "framer-motion";
+
+import {
+  FaArrowRight,
+  FaCheckCircle,
+  FaEnvelope,
+  FaPhoneAlt,
+  FaTimes,
+  FaUser,
+} from "react-icons/fa";
+
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+/* =========================================================
+   GLOBAL FLAG
+========================================================= */
+
+declare global {
+  interface Window {
+    __dholeraWelcomePopupOpened?: boolean;
+  }
+}
+
+/* =========================================================
+   PROPS
+========================================================= */
 
 type PopupFormProps = {
-  open: boolean;
-  onClose: () => void;
-  propertyTitle?: string;
+  open?: boolean;
+  onClose?: () => void;
+  propertyName?: string;
 };
 
+/* =========================================================
+   VALIDATION
+========================================================= */
+
+const formSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .min(3, "Please enter your full name")
+    .max(50, "Name is too long"),
+
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address"),
+
+  phone: z
+    .string()
+    .trim()
+    .min(1, "Phone number is required")
+    .regex(
+      /^[6-9]\d{9}$/,
+      "Enter a valid 10-digit Indian mobile number"
+    ),
+});
+
+type FormData = z.infer<typeof formSchema>;
+
+/* =========================================================
+   COMPONENT
+========================================================= */
+
 export default function PopupForm({
-  open,
+  open = false,
   onClose,
-  propertyTitle,
+  propertyName = "Dholera Property Enquiry",
 }: PopupFormProps) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [autoOpen, setAutoOpen] = useState(false);
 
-  const [errors, setErrors] = useState({
-    name: "",
-    email: "",
-    phone: "",
-  });
+  const [submitted, setSubmitted] =
+    useState(false);
 
-  const validate = () => {
-    const newErrors = {
+  const [serverError, setServerError] =
+    useState("");
+
+  const modalOpen =
+    open || autoOpen;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+
+    formState: {
+      errors,
+      isSubmitting,
+    },
+  } = useForm<FormData>({
+    resolver:
+      zodResolver(formSchema),
+
+    defaultValues: {
       name: "",
       email: "",
       phone: "",
+    },
+
+    mode: "onSubmit",
+
+    reValidateMode:
+      "onChange",
+  });
+
+  /* =========================================================
+     AUTO OPEN ONLY ONCE
+  ========================================================= */
+
+  useEffect(() => {
+    if (
+      window.__dholeraWelcomePopupOpened
+    ) {
+      return;
+    }
+
+    window.__dholeraWelcomePopupOpened =
+      true;
+
+    const timer =
+      window.setTimeout(() => {
+        setAutoOpen(true);
+      }, 1200);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  /* =========================================================
+     CLOSE
+  ========================================================= */
+
+  const handleClose =
+    useCallback(() => {
+      setAutoOpen(false);
+
+      setServerError("");
+
+      onClose?.();
+
+      setTimeout(() => {
+        reset();
+
+        setSubmitted(false);
+      }, 250);
+    }, [
+      reset,
+      onClose,
+    ]);
+
+  /* =========================================================
+     ESC CLOSE
+  ========================================================= */
+
+  useEffect(() => {
+    const handleEscape = (
+      event: KeyboardEvent
+    ) => {
+      if (
+        event.key === "Escape" &&
+        modalOpen
+      ) {
+        handleClose();
+      }
     };
 
-    let valid = true;
+    window.addEventListener(
+      "keydown",
+      handleEscape
+    );
 
-    if (name.trim().length < 3) {
-      newErrors.name = "Please enter your full name";
-      valid = false;
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+    };
+  }, [
+    modalOpen,
+    handleClose,
+  ]);
+
+  /* =========================================================
+     BODY SCROLL LOCK
+  ========================================================= */
+
+  useEffect(() => {
+    if (modalOpen) {
+      document.body.style.overflow =
+        "hidden";
+    } else {
+      document.body.style.overflow =
+        "";
     }
 
-    if (
-      email &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    ) {
-      newErrors.email = "Please enter a valid email";
-      valid = false;
-    }
+    return () => {
+      document.body.style.overflow =
+        "";
+    };
+  }, [modalOpen]);
 
-    if (!/^[0-9]{10}$/.test(phone)) {
-      newErrors.phone = "Enter a valid 10-digit mobile number";
-      valid = false;
-    }
+  /* =========================================================
+     SUBMIT → API → PAYLOAD → MONGODB
+  ========================================================= */
 
-    setErrors(newErrors);
-    return valid;
-  };
-
-  const handleSubmit = (
-    e: React.FormEvent<HTMLFormElement>
+  const onSubmit = async (
+    data: FormData
   ) => {
-    e.preventDefault();
+    try {
+      setServerError("");
 
-    if (!validate()) return;
+      console.log(
+        "Submitting popup enquiry:",
+        {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          property: propertyName,
+        }
+      );
 
-    setLoading(true);
+      /* =============================================
+         POPUP → ENQUIRY API
+      ============================================= */
 
-    setTimeout(() => {
-      alert("🎉 Thank you! Our team will contact you shortly.");
+      const response = await fetch(
+        "/api/enquiries",
+        {
+          method: "POST",
 
-      setLoading(false);
-      setName("");
-      setEmail("");
-      setPhone("");
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
 
-      onClose();
-    }, 1500);
+          body: JSON.stringify({
+            name: data.name.trim(),
+
+            email: data.email
+              .trim()
+              .toLowerCase(),
+
+            phone: data.phone.trim(),
+
+            property:
+              propertyName ||
+              "Dholera Property Enquiry",
+
+            message: "",
+
+            source: "popup-form",
+          }),
+        }
+      );
+
+      /* =============================================
+         READ API RESPONSE
+      ============================================= */
+
+      const result =
+        await response.json();
+
+      console.log(
+        "Popup API Response:",
+        result
+      );
+
+      /* =============================================
+         CHECK API RESPONSE
+      ============================================= */
+
+      if (!response.ok) {
+        console.error(
+          "❌ Enquiry API Error:",
+          result
+        );
+
+        throw new Error(
+          result?.message ||
+            "Failed to save enquiry"
+        );
+      }
+
+      /* =============================================
+         SUCCESS
+      ============================================= */
+
+      console.log(
+        "✅ Popup enquiry saved to Payload:",
+        result
+      );
+
+      /* =============================================
+         RESET FORM
+      ============================================= */
+
+      reset();
+
+      /* =============================================
+         SHOW THANK YOU SCREEN
+      ============================================= */
+
+      setSubmitted(true);
+    } catch (error) {
+      console.error(
+        "❌ Popup enquiry submit error:",
+        error
+      );
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.";
+
+      setServerError(message);
+    }
   };
-
-  if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+    <AnimatePresence>
+      {modalOpen && (
+        <motion.div
+          initial={{
+            opacity: 0,
+          }}
+          animate={{
+            opacity: 1,
+          }}
+          exit={{
+            opacity: 0,
+          }}
+          transition={{
+            duration: 0.25,
+          }}
+          onClick={
+            handleClose
+          }
+          className="
+            fixed
+            inset-0
+            z-9999
 
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-linear-to-b from-[#ff8a65] via-[#ff9d6c] to-[#ffb37c] p-8 shadow-[0_25px_80px_rgba(0,0,0,0.35)]">
+            flex
+            items-center
+            justify-center
 
-        <button
-          onClick={onClose}
-          className="absolute right-5 top-5 text-4xl font-light text-white transition hover:rotate-90"
+            overflow-y-auto
+
+            bg-[#081A3A]/70
+
+            px-4
+            py-4
+
+            backdrop-blur-sm
+          "
         >
-          ×
-        </button>
+          {/* =================================================
+              POPUP CARD
+          ================================================= */}
 
-        <h2 className="text-center text-4xl font-extrabold leading-tight text-white">
-          🎉 Register Here
-        </h2>
+          <motion.div
+            initial={{
+              opacity: 0,
+              scale: 0.92,
+              y: 30,
+            }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              y: 0,
+            }}
+            exit={{
+              opacity: 0,
+              scale: 0.95,
+              y: 20,
+            }}
+            transition={{
+              duration: 0.4,
 
-        <h3 className="mt-2 text-center text-2xl font-bold text-white">
-          and Avail the
-        </h3>
+              ease: [
+                0.22,
+                1,
+                0.36,
+                1,
+              ],
+            }}
+            onClick={(
+              event
+            ) => {
+              event.stopPropagation();
+            }}
+            className="
+              relative
 
-        <h3 className="text-center text-2xl font-bold text-white">
-          Best Offers!!
-        </h3>
+              max-h-[94vh]
 
-        {propertyTitle && (
-          <p className="mt-3 text-center text-sm font-semibold text-white/90">
-            Enquiring about: {propertyTitle}
-          </p>
-        )}
+              w-full
+              max-w-87.5
 
-        <div className="mt-8 text-center">
-          <p className="text-lg font-semibold text-white">
-            We Promise 📞 Instant Call Back
-          </p>
+              overflow-x-hidden
+              overflow-y-auto
 
-          <h4 className="mt-2 text-3xl font-bold text-white">
-            +91 92171 04219
-          </h4>
-        </div>
+              rounded-[22px]
 
-        <form
-          onSubmit={handleSubmit}
-          className="mt-8 space-y-5"
-        >
-          <div>
-            <input
-              type="text"
-              placeholder="Your Name*"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-xl border border-transparent bg-white px-5 py-4 text-lg outline-none transition focus:border-red-500"
-            />
+              border
+              border-[#FF7A00]/20
 
-            {errors.name && (
-              <p className="mt-1 text-sm font-medium text-red-700">
-                {errors.name}
-              </p>
-            )}
-          </div>
+              bg-[#FFF1E5]
 
-          <div>
-            <input
-              type="email"
-              placeholder="Your Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-transparent bg-white px-5 py-4 text-lg outline-none transition focus:border-red-500"
-            />
+              shadow-[0_22px_65px_rgba(8,26,58,0.30)]
 
-            {errors.email && (
-              <p className="mt-1 text-sm font-medium text-red-700">
-                {errors.email}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <input
-              type="tel"
-              placeholder="Your Phone*"
-              maxLength={10}
-              value={phone}
-              onChange={(e) =>
-                setPhone(e.target.value.replace(/\D/g, ""))
-              }
-              className="w-full rounded-xl border border-transparent bg-white px-5 py-4 text-lg outline-none transition focus:border-red-500"
-            />
-
-            {errors.phone && (
-              <p className="mt-1 text-sm font-medium text-red-700">
-                {errors.phone}
-              </p>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-full bg-[#e53935] py-4 text-xl font-bold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+              sm:max-w-107.5
+              sm:rounded-[28px]
+            "
           >
-            {loading ? "Submitting..." : "Submit"}
-          </button>
-        </form>
+            {/* =================================================
+                CLOSE BUTTON
+            ================================================= */}
 
-      </div>
+            <motion.button
+              type="button"
+              onClick={
+                handleClose
+              }
+              aria-label="Close popup"
+              whileHover={{
+                rotate: 90,
+                scale: 1.08,
+              }}
+              whileTap={{
+                scale: 0.9,
+              }}
+              className="
+                absolute
+                right-3
+                top-3
+                z-40
 
-    </div>
+                flex
+                h-8
+                w-8
+
+                items-center
+                justify-center
+
+                rounded-full
+
+                border
+                border-[#FF7A00]/20
+
+                bg-white
+
+                text-[#081A3A]
+
+                shadow-sm
+
+                transition-all
+                duration-300
+
+                hover:border-[#FF7A00]
+                hover:bg-[#FF7A00]
+                hover:text-white
+
+                sm:right-4
+                sm:top-4
+                sm:h-9
+                sm:w-9
+              "
+            >
+              <FaTimes
+                size={13}
+              />
+            </motion.button>
+
+            <AnimatePresence mode="wait">
+              {!submitted ? (
+                /* =================================================
+                    FORM SCREEN
+                ================================================= */
+
+                <motion.div
+                  key="form"
+                  initial={{
+                    opacity: 1,
+                  }}
+                  animate={{
+                    opacity: 1,
+                  }}
+                  exit={{
+                    opacity: 0,
+                    y: -15,
+                  }}
+                  transition={{
+                    duration: 0.25,
+                  }}
+                >
+                  {/* =============================================
+                      HEADER
+                  ============================================= */}
+
+                  <div
+                    className="
+                      relative
+
+                      border-b
+                      border-[#FF7A00]/10
+
+                      bg-linear-to-b
+                      from-[#FFF4EA]
+                      to-[#FFE8D4]
+
+                      px-5
+                      pb-4
+                      pt-5
+
+                      text-center
+
+                      sm:px-7
+                      sm:pb-6
+                      sm:pt-7
+                    "
+                  >
+                    {/* BADGE */}
+
+                    <motion.div
+                      initial={{
+                        opacity: 0,
+                        y: -8,
+                      }}
+                      animate={{
+                        opacity: 1,
+                        y: 0,
+                      }}
+                      transition={{
+                        delay: 0.12,
+                      }}
+                      className="
+                        mx-auto
+                        mb-2
+
+                        flex
+                        w-fit
+                        items-center
+                        gap-2
+
+                        rounded-full
+
+                        border
+                        border-[#FF7A00]/20
+
+                        bg-white/70
+
+                        px-3
+                        py-1
+
+                        text-[9px]
+                        font-bold
+                        uppercase
+                        tracking-[0.15em]
+
+                        text-[#FF7A00]
+
+                        sm:text-[10px]
+                      "
+                    >
+                      <FaCheckCircle />
+
+                      Property Enquiry
+                    </motion.div>
+
+                    {/* TITLE */}
+
+                    <motion.h2
+                      initial={{
+                        opacity: 0,
+                        y: 10,
+                      }}
+                      animate={{
+                        opacity: 1,
+                        y: 0,
+                      }}
+                      transition={{
+                        delay: 0.18,
+                      }}
+                      className="
+                        text-center
+
+                        text-[23px]
+                        font-extrabold
+
+                        text-[#081A3A]
+
+                        sm:text-3xl
+                      "
+                    >
+                      Enquire Now
+                    </motion.h2>
+
+                    {/* LINE */}
+
+                    <motion.div
+                      initial={{
+                        width: 0,
+                      }}
+                      animate={{
+                        width: 44,
+                      }}
+                      transition={{
+                        delay: 0.25,
+                        duration: 0.45,
+                      }}
+                      className="
+                        mx-auto
+                        mt-2
+
+                        h-0.75
+
+                        rounded-full
+
+                        bg-[#FF7A00]
+                      "
+                    />
+
+                    {/* DESCRIPTION */}
+
+                    <p
+                      className="
+                        mx-auto
+                        mt-2
+
+                        max-w-72.5
+
+                        text-center
+
+                        text-[11px]
+                        leading-5
+
+                        text-gray-600
+
+                        sm:mt-3
+                        sm:text-[13px]
+                        sm:leading-6
+                      "
+                    >
+                      Share your details and our
+                      property consultant will contact
+                      you shortly.
+                    </p>
+
+                    {/* PROPERTY */}
+
+                    <div
+                      className="
+                        mt-3
+
+                        rounded-xl
+
+                        border
+                        border-[#FF7A00]/15
+
+                        bg-white/60
+
+                        px-3
+                        py-2
+
+                        text-center
+
+                        sm:mt-4
+                      "
+                    >
+                      <p
+                        className="
+                          text-[8px]
+                          font-semibold
+                          uppercase
+                          tracking-[0.15em]
+
+                          text-gray-400
+
+                          sm:text-[9px]
+                        "
+                      >
+                        Enquiring About
+                      </p>
+
+                      <p
+                        className="
+                          mt-1
+
+                          text-[12px]
+                          font-bold
+
+                          text-[#081A3A]
+
+                          sm:text-[13px]
+                        "
+                      >
+                        {propertyName}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* =============================================
+                      FORM BODY
+                  ============================================= */}
+
+                  <div
+                    className="
+                      bg-linear-to-b
+                      from-[#FFF4EA]
+                      to-[#FFE8D4]
+
+                      px-5
+                      pb-5
+                      pt-4
+
+                      sm:px-7
+                      sm:pb-7
+                      sm:pt-6
+                    "
+                  >
+                    <form
+                      onSubmit={
+                        handleSubmit(
+                          onSubmit
+                        )
+                      }
+                      noValidate
+                      className="
+                        space-y-3
+                        sm:space-y-4
+                      "
+                    >
+                      {/* =========================================
+                          NAME
+                      ========================================= */}
+
+                      <div>
+                        <div
+                          className={`
+                            flex
+                            items-center
+                            gap-3
+
+                            rounded-xl
+
+                            border
+
+                            bg-white
+
+                            px-3.5
+
+                            transition-all
+                            duration-300
+
+                            ${
+                              errors.name
+                                ? "border-red-500 bg-red-50/20"
+                                : "border-[#FF7A00]/20 focus-within:border-[#FF7A00]"
+                            }
+
+                            focus-within:shadow-[0_6px_20px_rgba(255,122,0,0.10)]
+
+                            sm:px-4
+                          `}
+                        >
+                          <FaUser
+                            className={
+                              errors.name
+                                ? "text-sm text-red-500"
+                                : "text-sm text-[#FF7A00]"
+                            }
+                          />
+
+                          <input
+                            type="text"
+                            placeholder="Your Name*"
+                            {...register(
+                              "name"
+                            )}
+                            className="
+                              w-full
+
+                              bg-transparent
+
+                              py-2.5
+
+                              text-sm
+                              text-[#081A3A]
+
+                              outline-none
+
+                              placeholder:text-gray-400
+
+                              sm:py-3.5
+                            "
+                          />
+                        </div>
+
+                        <AnimatePresence>
+                          {errors.name && (
+                            <motion.p
+                              initial={{
+                                opacity: 0,
+                                y: -4,
+                              }}
+                              animate={{
+                                opacity: 1,
+                                y: 0,
+                              }}
+                              exit={{
+                                opacity: 0,
+                              }}
+                              className="
+                                ml-1
+                                mt-1
+
+                                text-[10px]
+                                font-medium
+                                text-red-500
+
+                                sm:text-[11px]
+                              "
+                            >
+                              {
+                                errors
+                                  .name
+                                  .message
+                              }
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {/* =========================================
+                          EMAIL
+                      ========================================= */}
+
+                      <div>
+                        <div
+                          className={`
+                            flex
+                            items-center
+                            gap-3
+
+                            rounded-xl
+
+                            border
+
+                            bg-white
+
+                            px-3.5
+
+                            transition-all
+                            duration-300
+
+                            ${
+                              errors.email
+                                ? "border-red-500 bg-red-50/20"
+                                : "border-[#FF7A00]/20 focus-within:border-[#FF7A00]"
+                            }
+
+                            focus-within:shadow-[0_6px_20px_rgba(255,122,0,0.10)]
+
+                            sm:px-4
+                          `}
+                        >
+                          <FaEnvelope
+                            className={
+                              errors.email
+                                ? "text-sm text-red-500"
+                                : "text-sm text-[#FF7A00]"
+                            }
+                          />
+
+                          <input
+                            type="email"
+                            placeholder="Your Email*"
+                            {...register(
+                              "email"
+                            )}
+                            className="
+                              w-full
+
+                              bg-transparent
+
+                              py-2.5
+
+                              text-sm
+                              text-[#081A3A]
+
+                              outline-none
+
+                              placeholder:text-gray-400
+
+                              sm:py-3.5
+                            "
+                          />
+                        </div>
+
+                        <AnimatePresence>
+                          {errors.email && (
+                            <motion.p
+                              initial={{
+                                opacity: 0,
+                                y: -4,
+                              }}
+                              animate={{
+                                opacity: 1,
+                                y: 0,
+                              }}
+                              exit={{
+                                opacity: 0,
+                              }}
+                              className="
+                                ml-1
+                                mt-1
+
+                                text-[10px]
+                                font-medium
+                                text-red-500
+
+                                sm:text-[11px]
+                              "
+                            >
+                              {
+                                errors
+                                  .email
+                                  .message
+                              }
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {/* =========================================
+                          PHONE
+                      ========================================= */}
+
+                      <div>
+                        <div
+                          className={`
+                            flex
+                            items-center
+
+                            rounded-xl
+
+                            border
+
+                            bg-white
+
+                            transition-all
+                            duration-300
+
+                            ${
+                              errors.phone
+                                ? "border-red-500 bg-red-50/20"
+                                : "border-[#FF7A00]/20 focus-within:border-[#FF7A00]"
+                            }
+
+                            focus-within:shadow-[0_6px_20px_rgba(255,122,0,0.10)]
+                          `}
+                        >
+                          <span
+                            className="
+                              flex
+                              h-10.5
+                              w-10.5
+
+                              shrink-0
+
+                              items-center
+                              justify-center
+
+                              text-[#FF7A00]
+
+                              sm:h-12
+                              sm:w-12
+                            "
+                          >
+                            <FaPhoneAlt
+                              size={13}
+                            />
+                          </span>
+
+                          <span
+                            className="
+                              border-r
+                              border-[#FF7A00]/15
+
+                              pr-2
+
+                              text-xs
+                              font-bold
+
+                              text-gray-500
+
+                              sm:pr-3
+                              sm:text-sm
+                            "
+                          >
+                            +91
+                          </span>
+
+                          <input
+                            type="tel"
+                            inputMode="numeric"
+                            maxLength={10}
+                            placeholder="9876543210"
+                            {...register(
+                              "phone",
+                              {
+                                onChange:
+                                  (
+                                    event
+                                  ) => {
+                                    event.target.value =
+                                      event.target.value
+                                        .replace(
+                                          /\D/g,
+                                          ""
+                                        )
+                                        .slice(
+                                          0,
+                                          10
+                                        );
+                                  },
+                              }
+                            )}
+                            className="
+                              min-w-0
+                              w-full
+
+                              bg-transparent
+
+                              px-2
+                              py-2.5
+
+                              text-sm
+                              text-[#081A3A]
+
+                              outline-none
+
+                              placeholder:text-gray-400
+
+                              sm:px-3
+                              sm:py-3.5
+                            "
+                          />
+                        </div>
+
+                        <AnimatePresence>
+                          {errors.phone && (
+                            <motion.p
+                              initial={{
+                                opacity: 0,
+                                y: -4,
+                              }}
+                              animate={{
+                                opacity: 1,
+                                y: 0,
+                              }}
+                              exit={{
+                                opacity: 0,
+                              }}
+                              className="
+                                ml-1
+                                mt-1
+
+                                text-[10px]
+                                font-medium
+                                text-red-500
+
+                                sm:text-[11px]
+                              "
+                            >
+                              {
+                                errors
+                                  .phone
+                                  .message
+                              }
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {/* =========================================
+                          SERVER ERROR
+                      ========================================= */}
+
+                      {serverError && (
+                        <motion.p
+                          initial={{
+                            opacity: 0,
+                            y: -5,
+                          }}
+                          animate={{
+                            opacity: 1,
+                            y: 0,
+                          }}
+                          className="
+                            rounded-lg
+                            border
+                            border-red-200
+                            bg-red-50
+                            px-3
+                            py-2
+                            text-center
+                            text-[11px]
+                            font-medium
+                            text-red-600
+                          "
+                        >
+                          {serverError}
+                        </motion.p>
+                      )}
+
+                      {/* =========================================
+                          SUBMIT
+                      ========================================= */}
+
+                      <motion.button
+                        type="submit"
+                        disabled={
+                          isSubmitting
+                        }
+                        whileHover={
+                          isSubmitting
+                            ? undefined
+                            : {
+                                y: -2,
+                                scale: 1.01,
+                              }
+                        }
+                        whileTap={
+                          isSubmitting
+                            ? undefined
+                            : {
+                                scale: 0.98,
+                              }
+                        }
+                        className="
+                          group
+                          relative
+
+                          flex
+                          w-full
+                          items-center
+                          justify-center
+                          gap-2
+
+                          overflow-hidden
+
+                          rounded-xl
+
+                          bg-[#FF7A00]
+
+                          px-5
+                          py-3
+
+                          text-[12px]
+                          font-bold
+                          uppercase
+                          tracking-[0.08em]
+
+                          text-white
+
+                          shadow-[0_10px_25px_rgba(255,122,0,0.25)]
+
+                          transition-all
+                          duration-300
+
+                          hover:bg-[#FF9638]
+                          hover:shadow-[0_14px_30px_rgba(255,122,0,0.30)]
+
+                          disabled:cursor-not-allowed
+                          disabled:opacity-60
+
+                          sm:py-3.5
+                          sm:text-[13px]
+                        "
+                      >
+                        {!isSubmitting && (
+                          <span
+                            className="
+                              pointer-events-none
+
+                              absolute
+                              inset-y-0
+                              -left-20
+
+                              w-16
+
+                              -skew-x-12
+
+                              bg-white/25
+
+                              transition-all
+                              duration-700
+
+                              group-hover:left-[120%]
+                            "
+                          />
+                        )}
+
+                        <span
+                          className="
+                            relative
+                            z-10
+                          "
+                        >
+                          {isSubmitting
+                            ? "Submitting..."
+                            : "Submit Enquiry"}
+                        </span>
+
+                        {!isSubmitting && (
+                          <FaArrowRight
+                            className="
+                              relative
+                              z-10
+
+                              text-xs
+
+                              transition-transform
+                              duration-300
+
+                              group-hover:translate-x-1.5
+                            "
+                          />
+                        )}
+                      </motion.button>
+                    </form>
+
+                    {/* =============================================
+                        QUICK HELP
+                    ============================================= */}
+
+                    <div
+                      className="
+                        mt-4
+
+                        border-t
+                        border-[#FF7A00]/15
+
+                        pt-4
+
+                        text-center
+                      "
+                    >
+                      <p
+                        className="
+                          text-[10px]
+                          font-medium
+                          text-gray-500
+
+                          sm:text-[11px]
+                        "
+                      >
+                        Need quick assistance?
+                      </p>
+
+                      <a
+                        href="tel:+919217104219"
+                        className="
+                          mt-1.5
+
+                          inline-flex
+                          items-center
+                          gap-2
+
+                          text-[13px]
+                          font-bold
+
+                          text-[#081A3A]
+
+                          transition-all
+                          duration-300
+
+                          hover:text-[#FF7A00]
+
+                          sm:text-sm
+                        "
+                      >
+                        <FaPhoneAlt
+                          size={11}
+                        />
+
+                        +91 92171 04219
+                      </a>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                /* =================================================
+                    THANK YOU SCREEN
+                ================================================= */
+
+                <motion.div
+                  key="thank-you"
+                  initial={{
+                    opacity: 0,
+                    scale: 0.9,
+                    y: 20,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    scale: 1,
+                    y: 0,
+                  }}
+                  exit={{
+                    opacity: 0,
+                    scale: 0.95,
+                  }}
+                  transition={{
+                    duration: 0.45,
+
+                    ease: [
+                      0.22,
+                      1,
+                      0.36,
+                      1,
+                    ],
+                  }}
+                  className="
+                    flex
+                    min-h-105
+                    flex-col
+                    items-center
+                    justify-center
+
+                    bg-linear-to-b
+                    from-[#FFF4EA]
+                    to-[#FFE8D4]
+
+                    px-6
+                    py-10
+
+                    text-center
+                  "
+                >
+                  {/* SUCCESS ICON */}
+
+                  <motion.div
+                    initial={{
+                      scale: 0,
+                      rotate: -25,
+                    }}
+                    animate={{
+                      scale: 1,
+                      rotate: 0,
+                    }}
+                    transition={{
+                      delay: 0.1,
+                      type: "spring",
+                      stiffness: 180,
+                      damping: 12,
+                    }}
+                    className="
+                      relative
+
+                      flex
+                      h-16
+                      w-16
+                      items-center
+                      justify-center
+
+                      rounded-full
+
+                      bg-[#FF7A00]
+
+                      text-white
+
+                      shadow-[0_10px_30px_rgba(255,122,0,0.30)]
+                    "
+                  >
+                    <FaCheckCircle
+                      size={28}
+                    />
+
+                    <motion.span
+                      initial={{
+                        scale: 1,
+                        opacity: 0.5,
+                      }}
+                      animate={{
+                        scale: 1.5,
+                        opacity: 0,
+                      }}
+                      transition={{
+                        duration: 1.3,
+                        repeat: Infinity,
+                      }}
+                      className="
+                        absolute
+                        inset-0
+
+                        rounded-full
+
+                        border-2
+                        border-[#FF7A00]
+                      "
+                    />
+                  </motion.div>
+
+                  {/* LABEL */}
+
+                  <motion.p
+                    initial={{
+                      opacity: 0,
+                      y: 8,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    transition={{
+                      delay: 0.2,
+                    }}
+                    className="
+                      mt-5
+
+                      text-[9px]
+                      font-bold
+                      uppercase
+                      tracking-[0.2em]
+
+                      text-[#FF7A00]
+                    "
+                  >
+                    Enquiry Submitted
+                  </motion.p>
+
+                  {/* TITLE */}
+
+                  <motion.h2
+                    initial={{
+                      opacity: 0,
+                      y: 8,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    transition={{
+                      delay: 0.25,
+                    }}
+                    className="
+                      mt-1
+
+                      text-[26px]
+                      font-extrabold
+
+                      text-[#081A3A]
+
+                      sm:text-[30px]
+                    "
+                  >
+                    Thank You!
+                  </motion.h2>
+
+                  {/* LINE */}
+
+                  <motion.div
+                    initial={{
+                      width: 0,
+                    }}
+                    animate={{
+                      width: 42,
+                    }}
+                    transition={{
+                      delay: 0.3,
+                      duration: 0.45,
+                    }}
+                    className="
+                      mt-2
+
+                      h-0.75
+
+                      rounded-full
+
+                      bg-[#FF7A00]
+                    "
+                  />
+
+                  {/* MESSAGE */}
+
+                  <motion.p
+                    initial={{
+                      opacity: 0,
+                      y: 8,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    transition={{
+                      delay: 0.35,
+                    }}
+                    className="
+                      mx-auto
+                      mt-4
+
+                      max-w-70
+
+                      text-[12px]
+                      leading-5
+
+                      text-gray-600
+
+                      sm:text-[13px]
+                      sm:leading-6
+                    "
+                  >
+                    Your enquiry has been submitted successfully.
+                    Our property consultant will contact you shortly.
+                  </motion.p>
+
+                  {/* DONE */}
+
+                  <motion.button
+                    type="button"
+                    onClick={
+                      handleClose
+                    }
+                    initial={{
+                      opacity: 0,
+                      y: 10,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    transition={{
+                      delay: 0.4,
+                    }}
+                    whileHover={{
+                      y: -2,
+                      scale: 1.02,
+                    }}
+                    whileTap={{
+                      scale: 0.97,
+                    }}
+                    className="
+                      group
+                      relative
+
+                      mt-6
+
+                      flex
+                      min-w-36.25
+                      items-center
+                      justify-center
+                      gap-2
+
+                      overflow-hidden
+
+                      rounded-xl
+
+                      bg-[#FF7A00]
+
+                      px-7
+                      py-3
+
+                      text-[11px]
+                      font-bold
+                      uppercase
+                      tracking-[0.08em]
+
+                      text-white
+
+                      shadow-[0_8px_22px_rgba(255,122,0,0.25)]
+
+                      transition-all
+                      duration-300
+
+                      hover:bg-[#FF9638]
+                    "
+                  >
+                    <span
+                      className="
+                        absolute
+                        -left-full
+                        top-0
+
+                        h-full
+                        w-1/2
+
+                        skew-x-[-25deg]
+
+                        bg-linear-to-r
+                        from-transparent
+                        via-white/25
+                        to-transparent
+
+                        transition-all
+                        duration-700
+
+                        group-hover:left-[130%]
+                      "
+                    />
+
+                    <span className="relative z-10">
+                      Done
+                    </span>
+
+                    <FaArrowRight
+                      className="
+                        relative
+                        z-10
+
+                        text-[10px]
+
+                        transition-transform
+                        duration-300
+
+                        group-hover:translate-x-1
+                      "
+                    />
+                  </motion.button>
+
+                  {/* QUICK CALL */}
+
+                  <motion.div
+                    initial={{
+                      opacity: 0,
+                    }}
+                    animate={{
+                      opacity: 1,
+                    }}
+                    transition={{
+                      delay: 0.5,
+                    }}
+                    className="
+                      mt-6
+
+                      w-full
+
+                      border-t
+                      border-[#FF7A00]/15
+
+                      pt-4
+                    "
+                  >
+                    <p className="text-[10px] text-gray-500">
+                      Need quick assistance?
+                    </p>
+
+                    <a
+                      href="tel:+919217104219"
+                      className="
+                        mt-1.5
+
+                        inline-flex
+                        items-center
+                        gap-2
+
+                        text-[13px]
+                        font-bold
+
+                        text-[#081A3A]
+
+                        transition-all
+                        duration-300
+
+                        hover:text-[#FF7A00]
+                      "
+                    >
+                      <FaPhoneAlt
+                        size={11}
+                      />
+
+                      +91 92171 04219
+                    </a>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

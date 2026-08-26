@@ -26,7 +26,7 @@ export default function CTASection() {
         <div>
 
           <h2 className="text-4xl font-semibold text-white md:text-5xl">
-            Looking To Sell Residential Plot?
+            Looking To Buy Residential Plot?
           </h2>
 
           <p className="mt-4 max-w-2xl text-lg text-orange-100">
@@ -39,7 +39,7 @@ export default function CTASection() {
         {/* Button */}
 
         <Link
-          href="/contact"
+          href="/contact-us"
           className="group inline-flex items-center gap-3 rounded-lg bg-white px-8 py-4 text-lg font-semibold text-[#0A2E73] shadow-xl transition-all duration-300 hover:-translate-y-1 hover:bg-[#0A2E73] hover:text-white"
         >
           Get in Touch

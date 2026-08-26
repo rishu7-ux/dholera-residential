@@ -1,141 +1,505 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { FaUserAlt, FaCalendarAlt, FaArrowRight } from "react-icons/fa";
 
-const blogs = [
-  {
-    id: 1,
-    image: "/images/blog/blog1.jpg",
-    title:
-      "Tata Semiconductor Plant in Dholera: How the ₹91,000 Crore Fab Will Change Your Plot's Value",
-    author: "Admin",
-    date: "Apr 07, 2026",
-    slug: "/blog/tata-semiconductor-plant",
-  },
-  {
-    id: 2,
-    image: "/images/blog/blog2.jpg",
-    title: "G+5 SCO Building on a Dholera Plot?",
-    author: "Admin",
-    date: "Jul 17, 2026",
-    slug: "/blog/g5-sco-building",
-  },
-  {
-    id: 3,
-    image: "/images/blog/blog3.jpg",
-    title: "Why Dholera Smart City is India's Biggest Investment Opportunity",
-    author: "Admin",
-    date: "Jul 20, 2026",
-    slug: "/blog/dholera-investment",
-  },
-];
+import {
+  FaUserAlt,
+  FaCalendarAlt,
+  FaArrowRight,
+} from "react-icons/fa";
 
-export default function BlogSection() {
+import { getPayload } from "payload";
+import config from "@/payload.config";
+
+/* =========================================================
+   TYPES
+========================================================= */
+
+type Media = {
+  id: string;
+  url?: string | null;
+  alt?: string | null;
+};
+
+type Blog = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  status?: string | null;
+  publishedAt?: string | null;
+  createdAt?: string | null;
+  featuredImage?: Media | string | null;
+};
+
+/* =========================================================
+   BLOG SECTION
+========================================================= */
+
+export default async function BlogSection() {
+  const payload = await getPayload({
+    config,
+  });
+
+  /* =========================================================
+     GET PUBLISHED BLOGS
+  ========================================================= */
+
+  const result = await payload.find({
+    collection: "blogs",
+
+    where: {
+      status: {
+        equals: "published",
+      },
+    },
+
+    sort: "-publishedAt",
+
+    limit: 10,
+
+    depth: 1,
+  });
+
+  const blogs = result.docs as Blog[];
+
+  /* =========================================================
+     DATE FORMAT
+  ========================================================= */
+
+  const formatDate = (date?: string | null) => {
+    if (!date) return "";
+
+    return new Date(date).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  /*
+   * Duplicate blogs for infinite continuous movement.
+   */
+  const runningBlogs =
+    blogs.length > 0
+      ? [...blogs, ...blogs]
+      : [];
+
   return (
-    <section className="bg-[#F8FAFC] py-20">
-      <div className="mx-auto max-w-7xl px-5">
+    <section className="overflow-hidden bg-[#F8FAFC] py-16 sm:py-20">
 
-        {/* Heading */}
+      {/* =====================================================
+          CSS ANIMATION
+      ===================================================== */}
 
-        <div className="mb-14">
+      <style>
+        {`
+          @keyframes dholeraBlogScroll {
+            0% {
+              transform: translateX(0);
+            }
 
-          <h2 className="text-5xl font-light text-[#081A3A]">
-            Our <span className="font-semibold text-[#FF7A00]">Blog</span>
-          </h2>
+            100% {
+              transform: translateX(-50%);
+            }
+          }
 
-          <p className="mt-5 max-w-3xl text-xl text-gray-600">
-            Founded with a vision to contribute to India’s next-generation
-            industrial revolution.
+          .dholera-blog-track {
+            animation:
+              dholeraBlogScroll
+              35s
+              linear
+              infinite;
+
+            will-change: transform;
+          }
+
+          .dholera-blog-slider:hover
+          .dholera-blog-track {
+            animation-play-state: paused;
+          }
+
+          @media (max-width: 768px) {
+            .dholera-blog-track {
+              animation-duration: 25s;
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .dholera-blog-track {
+              animation: none;
+            }
+          }
+        `}
+      </style>
+
+      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+
+        {/* =====================================================
+            HEADING
+        ===================================================== */}
+
+        <div className="mb-10">
+
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#FF7A00]">
+            Latest Insights
           </p>
 
-          <div className="mt-5 flex gap-2">
-            {[1,2,3,4,5,6,7].map((item)=>(
+          <h2 className="mt-2 text-3xl font-light text-[#081A3A] sm:text-4xl lg:text-5xl">
+
+            Our{" "}
+
+            <span className="font-semibold text-[#FF7A00]">
+              Blog
+            </span>
+
+          </h2>
+
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-gray-600 sm:text-base">
+
+            Explore the latest Dholera property updates,
+            infrastructure news, industrial development and
+            investment opportunities.
+
+          </p>
+
+          <div className="mt-5 flex gap-1.5">
+
+            {[1, 2, 3, 4, 5, 6].map((item) => (
               <span
                 key={item}
-                className="h-2 w-2 rounded-full bg-[#FF7A00]"
+                className="h-1.5 w-1.5 rounded-full bg-[#FF7A00]"
               />
             ))}
+
           </div>
 
         </div>
 
-        {/* Blog Cards */}
+        {/* =====================================================
+            CONTINUOUS BLOG SLIDER
+        ===================================================== */}
 
-        <div className="grid gap-8 lg:grid-cols-3">
+        {blogs.length > 0 ? (
 
-          {blogs.map((blog)=>(
+          <div className="dholera-blog-slider relative overflow-hidden py-5">
 
-            <div
-              key={blog.id}
-              className="group overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
-            >
+            {/* LEFT FADE */}
 
-              {/* Image */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-8 bg-linear-to-r from-[#F8FAFC] to-transparent sm:w-16" />
 
-              <div className="relative h-70 overflow-hidden">
+            {/* RIGHT FADE */}
 
-                <Image
-                  src={blog.image}
-                  alt={blog.title}
-                  fill
-                  className="object-cover transition duration-700 group-hover:scale-110"
-                />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-8 bg-linear-to-l from-[#F8FAFC] to-transparent sm:w-16" />
 
-                {/* Overlay */}
+            {/* MOVING TRACK */}
 
-                <div className="absolute inset-0 bg-linear-to-t from-[#0A2E73]/70 to-transparent opacity-0 transition duration-500 group-hover:opacity-100"></div>
+            <div className="dholera-blog-track flex w-max gap-5">
 
-              </div>
+              {runningBlogs.map((blog, index) => {
 
-              {/* Content */}
+                /* ===========================================
+                   IMAGE
+                =========================================== */
 
-              <div className="p-7">
+                const media =
+                  typeof blog.featuredImage === "object" &&
+                  blog.featuredImage !== null
+                    ? blog.featuredImage
+                    : null;
 
-                <h3 className="line-clamp-2 text-3xl font-semibold leading-snug text-[#081A3A] transition duration-300 group-hover:text-[#FF7A00]">
+                const imageUrl =
+                  media?.url ||
+                  "/images/blog/blog1.jpg";
 
-                  {blog.title}
+                const imageAlt =
+                  media?.alt ||
+                  blog.title;
 
-                </h3>
+                /* ===========================================
+                   DATE
+                =========================================== */
 
-                <div className="mt-6 flex items-center gap-6 text-gray-500">
+                const blogDate =
+                  blog.publishedAt ||
+                  blog.createdAt;
 
-                  <div className="flex items-center gap-2">
+                /* ===========================================
+                   BLOG URL
+                =========================================== */
 
-                    <FaUserAlt className="text-[#FF7A00]" />
+                const blogUrl =
+                  `/blog/${blog.slug}`;
 
-                    <span>{blog.author}</span>
+                return (
 
-                  </div>
+                  <article
+                    key={`${blog.id}-${index}`}
+                    className="
+                      group
+                      flex
+                      w-68.75
+                      shrink-0
+                      flex-col
+                      overflow-hidden
+                      rounded-2xl
+                      border
+                      border-[#FFE1C7]
+                      bg-white
+                      shadow-[0_8px_25px_rgba(0,0,0,0.07)]
+                      transition-all
+                      duration-300
 
-                  <div className="flex items-center gap-2">
+                      hover:-translate-y-2
+                      hover:border-[#FF7A00]/50
+                      hover:shadow-[0_18px_40px_rgba(255,122,0,0.15)]
 
-                    <FaCalendarAlt className="text-[#FF7A00]" />
+                      sm:w-77.5
+                      lg:w-82.5
+                    "
+                  >
 
-                    <span>{blog.date}</span>
+                    {/* =======================================
+                        IMAGE
+                    ======================================= */}
 
-                  </div>
+                    <Link
+                      href={blogUrl}
+                      className="
+                        relative
+                        block
+                        h-46.25
+                        overflow-hidden
+                        bg-[#FFF4EA]
+                      "
+                    >
 
-                </div>
+                      <Image
+                        src={imageUrl}
+                        alt={imageAlt}
+                        fill
+                        sizes="
+                          (max-width: 640px) 275px,
+                          (max-width: 1024px) 310px,
+                          330px
+                        "
+                        className="
+                          object-cover
+                          transition-transform
+                          duration-700
+                          group-hover:scale-110
+                        "
+                      />
 
-                <Link
-                  href={blog.slug}
-                  className="mt-8 inline-flex items-center gap-2 font-semibold text-[#0A2E73] transition hover:text-[#FF7A00]"
-                >
-                  Read More
-                  <FaArrowRight className="transition group-hover:translate-x-1" />
-                </Link>
+                      {/* OVERLAY */}
 
-              </div>
+                      <div
+                        className="
+                          absolute
+                          inset-0
+                          bg-linear-to-t
+                          from-[#081A3A]/55
+                          via-transparent
+                          to-transparent
+                        "
+                      />
+
+                      {/* BADGE */}
+
+                      <span
+                        className="
+                          absolute
+                          left-4
+                          top-4
+                          rounded-full
+                          bg-[#FF7A00]
+                          px-3
+                          py-1.5
+                          text-[10px]
+                          font-bold
+                          uppercase
+                          tracking-wider
+                          text-white
+                          shadow-md
+                        "
+                      >
+                        Dholera
+                      </span>
+
+                    </Link>
+
+                    {/* =======================================
+                        CARD CONTENT
+                    ======================================= */}
+
+                    <div className="flex flex-1 flex-col p-5">
+
+                      {/* META */}
+
+                      <div className="flex flex-wrap items-center gap-4 text-[11px] text-gray-500">
+
+                        <span className="flex items-center gap-1.5">
+
+                          <FaUserAlt className="text-[#FF7A00]" />
+
+                          Admin
+
+                        </span>
+
+                        {blogDate && (
+
+                          <span className="flex items-center gap-1.5">
+
+                            <FaCalendarAlt className="text-[#FF7A00]" />
+
+                            {formatDate(blogDate)}
+
+                          </span>
+
+                        )}
+
+                      </div>
+
+                      {/* TITLE */}
+
+                      <Link href={blogUrl}>
+
+                        <h3
+                          className="
+                            mt-4
+                            line-clamp-2
+                            text-lg
+                            font-bold
+                            leading-7
+                            text-[#081A3A]
+                            transition-colors
+                            duration-300
+                            group-hover:text-[#FF7A00]
+                          "
+                        >
+                          {blog.title}
+                        </h3>
+
+                      </Link>
+
+                      {/* DESCRIPTION */}
+
+                      {blog.excerpt && (
+
+                        <p
+                          className="
+                            mt-3
+                            line-clamp-2
+                            text-sm
+                            leading-6
+                            text-gray-500
+                          "
+                        >
+                          {blog.excerpt}
+                        </p>
+
+                      )}
+
+                      {/* READ MORE */}
+
+                      <div className="mt-auto pt-5">
+
+                        <Link
+                          href={blogUrl}
+                          className="
+                            inline-flex
+                            items-center
+                            gap-2
+                            text-sm
+                            font-bold
+                            text-[#FF7A00]
+                            transition-all
+                            duration-300
+                            hover:gap-3
+                          "
+                        >
+
+                          Read More
+
+                          <FaArrowRight className="text-xs" />
+
+                        </Link>
+
+                      </div>
+
+                    </div>
+
+                  </article>
+
+                );
+              })}
 
             </div>
 
-          ))}
+          </div>
 
-        </div>
+        ) : (
+
+          /* =================================================
+             EMPTY STATE
+          ================================================= */
+
+          <div className="rounded-2xl border border-[#FFD9B8] bg-white p-10 text-center">
+
+            <h3 className="text-xl font-semibold text-[#081A3A]">
+              No Blogs Published Yet
+            </h3>
+
+            <p className="mt-2 text-sm text-gray-500">
+              Publish a blog from Payload CMS and it will
+              automatically appear here.
+            </p>
+
+          </div>
+
+        )}
+
+        {/* =====================================================
+            VIEW ALL BLOGS
+        ===================================================== */}
+
+        {blogs.length > 0 && (
+
+          <div className="mt-8 text-center">
+
+            <Link
+              href="/blog"
+              className="
+                inline-flex
+                items-center
+                gap-2
+                rounded-xl
+                bg-[#FF7A00]
+                px-6
+                py-3
+                text-sm
+                font-bold
+                text-white
+                shadow-[0_8px_20px_rgba(255,122,0,0.22)]
+                transition-all
+                duration-300
+
+                hover:-translate-y-1
+                hover:bg-[#FF8C24]
+              "
+            >
+
+              View All Blogs
+
+              <FaArrowRight />
+
+            </Link>
+
+          </div>
+
+        )}
 
       </div>
+
     </section>
   );
 }

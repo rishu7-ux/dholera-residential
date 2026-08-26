@@ -1,247 +1,719 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
+
 import {
+  FaArrowRight,
+  FaEnvelope,
   FaFacebookF,
   FaInstagram,
-  FaYoutube,
-  FaPhoneAlt,
-  FaEnvelope,
+  FaLinkedinIn,
   FaMapMarkerAlt,
+  FaPhoneAlt,
+  FaWhatsapp,
+  FaYoutube,
 } from "react-icons/fa";
 
+/* =========================================================
+   PROPERTY LINKS
+========================================================= */
+
 const propertyLinks = [
-  { label: "Ridhi 872/1 Sco Plots", href: "/properties/ridhi-872-1" },
-  { label: "Ridhi 966/1 SCO Plots", href: "/properties/ridhi-966-1" },
-  { label: "Ridhi 249/2 Premium SCO", href: "/properties/ridhi-249-2" },
-  { label: "Sidhi 857", href: "/properties/sidhi-857" },
-  { label: "Dholera Residential Plot", href: "/" },
+  {
+    label: "Ridhi 966/1 SCO Plots",
+    href: "/properties/ridhi-966-1",
+  },
+  {
+    label: "Ridhi 249/2 Premium SCO",
+    href: "/properties/ridhi-249-2",
+  },
+  {
+    label: "Sidhi 857",
+    href: "/properties/sidhi-857",
+  },
 ];
+
+/* =========================================================
+   QUICK LINKS
+========================================================= */
 
 const quickLinks = [
-  { label: "About Us", href: "/about-us" },
-  { label: "Properties", href: "/properties" },
-  { label: "Blog", href: "/blog" },
-  { label: "Contact Us", href: "/contact-us" },
-  { label: "Privacy Policy", href: "/privacy-policy" },
+  {
+    label: "Properties",
+    href: "/properties",
+  },
+  {
+    label: "Blog",
+    href: "/blog",
+  },
+  {
+    label: "Contact Us",
+    href: "/contact-us",
+  },
 ];
 
-const aboutLinks = [
-  { label: "About Us", href: "/about-us" },
-  { label: "Mission & Vision", href: "/about-us#vision" },
-  { label: "Director Message", href: "/director-message" },
-  { label: "Managing Director", href: "/managing-director" },
+/* =========================================================
+   SOCIAL LINKS
+========================================================= */
+
+const socialLinks = [
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/share/14nw1ZfSqB3/?mibextid=wwXIfr",
+    icon: <FaFacebookF />,
+    bg: "bg-[#1877F2]",
+  },
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/omana_projects",
+    icon: <FaInstagram />,
+    bg: "bg-gradient-to-br from-[#833AB4] via-[#FD1D1D] to-[#FCAF45]",
+  },
+  {
+    label: "YouTube",
+    href: "https://www.youtube.com/@OmanaProjects",
+    icon: <FaYoutube />,
+    bg: "bg-[#FF0000]",
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/company/omana-projectss/",
+    icon: <FaLinkedinIn />,
+    bg: "bg-[#0A66C2]",
+  },
+  {
+    label: "WhatsApp",
+    href: "https://wa.me/919217104219",
+    icon: <FaWhatsapp />,
+    bg: "bg-[#25D366]",
+  },
 ];
+
+/* =========================================================
+   ANIMATION
+========================================================= */
+
+const fadeUp = {
+  hidden: {
+    opacity: 0,
+    y: 22,
+  },
+
+  visible: {
+    opacity: 1,
+    y: 0,
+
+    transition: {
+      duration: 0.5,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
+
+/* =========================================================
+   FOOTER LINK
+========================================================= */
+
+function FooterLink({
+  href,
+  label,
+}: {
+  href: string;
+  label: string;
+}) {
+  return (
+    <li>
+      <Link
+        href={href}
+        className="
+          group
+          inline-flex
+          items-center
+          gap-2
+          text-[12px]
+          font-medium
+          text-gray-600
+          transition-all
+          duration-300
+          hover:text-[#FF7A00]
+          sm:text-[13px]
+        "
+      >
+        <span
+          className="
+            flex
+            h-5
+            w-5
+            shrink-0
+            items-center
+            justify-center
+            rounded-full
+            bg-[#FFF0E2]
+            text-[7px]
+            text-[#FF7A00]
+            transition-all
+            duration-300
+            group-hover:bg-[#FF7A00]
+            group-hover:text-white
+          "
+        >
+          <FaArrowRight />
+        </span>
+
+        <span className="transition-transform duration-300 group-hover:translate-x-1">
+          {label}
+        </span>
+      </Link>
+    </li>
+  );
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
 
 export default function Footer() {
   return (
-    <footer>
+    <footer className="overflow-hidden">
+      {/* =====================================================
+          MAIN FOOTER
+      ===================================================== */}
 
-      {/* Main Footer */} 
+      <section
+        className="
+          relative
+          overflow-hidden
+          border-t
+          border-[#FF7A00]/10
+          bg-[#FFF9F4]
+        "
+      >
+        {/* LEFT BACKGROUND EFFECT */}
 
-      <div className="bg-[#F8FAFC]">
+        <motion.div
+          className="
+            pointer-events-none
+            absolute
+            -left-24
+            top-10
+            h-64
+            w-64
+            rounded-full
+            bg-[#FF7A00]/6
+            blur-3xl
+          "
+          animate={{
+            scale: [1, 1.15, 1],
+            x: [0, 20, 0],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
 
-        <div className="mx-auto max-w-7xl px-6 py-20">
+        {/* RIGHT BACKGROUND EFFECT */}
 
-          <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
+        <motion.div
+          className="
+            pointer-events-none
+            absolute
+            -right-24
+            bottom-0
+            h-72
+            w-72
+            rounded-full
+            bg-[#FF9638]/7
+            blur-3xl
+          "
+          animate={{
+            scale: [1, 1.2, 1],
+            y: [0, -20, 0],
+          }}
+          transition={{
+            duration: 9,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
 
-            {/* Contact */}
+        {/* MAIN CONTAINER */}
 
-            <div>
+        <div
+          className="
+            relative
+            mx-auto
+            max-w-7xl
+            px-4
+            py-7
+            sm:px-6
+            sm:py-8
+            lg:pl-16
+            lg:pr-6
+            lg:py-10
+            xl:pl-20
+            xl:pr-8
+          "
+        >
+          {/* FOOTER GRID */}
 
-              <h3 className="mb-8 text-3xl font-bold text-[#0A2E73]">
-                Contact Us
+          <div
+            className="
+              grid
+              grid-cols-2
+              gap-x-4
+              gap-y-7
+              sm:grid-cols-4
+              sm:gap-5
+              lg:grid-cols-[1.35fr_1fr_0.8fr_1fr]
+              lg:gap-8
+              lg:translate-x-3
+              xl:translate-x-5
+            "
+          >
+            {/* =================================================
+                CONTACT / BRAND
+            ================================================= */}
+
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{
+                once: true,
+                amount: 0.15,
+              }}
+            >
+              <p
+                className="
+                  text-[9px]
+                  font-bold
+                  uppercase
+                  tracking-[0.2em]
+                  text-[#FF7A00]
+                "
+              >
+                Get In Touch
+              </p>
+
+              <h3
+                className="
+                  mt-1
+                  text-[22px]
+                  font-extrabold
+                  text-[#33261D]
+                  sm:text-[21px]
+                "
+              >
+                Omana Projects
               </h3>
 
-              <div className="space-y-6 text-gray-600">
+              <p
+                className="
+                  mt-3
+                  max-w-sm
+                  text-[11px]
+                  leading-5
+                  text-gray-600
+                  sm:text-[12px]
+                  sm:leading-6
+                "
+              >
+                Helping investors explore residential, commercial and
+                investment opportunities in Dholera.
+              </p>
 
-                <div className="group flex gap-4 transition-transform duration-300 ease-out hover:translate-x-1">
+              {/* CONTACT DETAILS */}
 
-                  <FaMapMarkerAlt className="mt-1 text-[#FF7A00] transition-transform duration-300 ease-out group-hover:scale-110" />
+              <div className="mt-3.5 space-y-2">
+                {/* ADDRESS */}
 
-                  <p className="transition-colors duration-300 ease-out group-hover:text-[#081A3A]">
-                    7th Floor, Plot No 56A/16,
-                    <br />
-                    C Block, Phase-2,
-                    <br />
-                    Sector-62, Noida,
-                    <br />
-                    Uttar Pradesh - 201309
+                <div className="flex items-start gap-3">
+                  <span
+                    className="
+                      flex
+                      h-8
+                      w-8
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-lg
+                      bg-[#FFF0E2]
+                      text-[11px]
+                      text-[#FF7A00]
+                    "
+                  >
+                    <FaMapMarkerAlt />
+                  </span>
+
+                  <p className="text-[10px] leading-4.5 text-gray-600 sm:text-[11px]">
+                    7th Floor, Plot No 56A/16, C Block, Phase-2,
+                    Sector-62, Noida, Uttar Pradesh - 201309
                   </p>
-
                 </div>
+
+                {/* EMAIL */}
 
                 <Link
                   href="mailto:sales@dholeraresidentialplot.com"
-                  className="group flex items-center gap-4 transition-transform duration-300 ease-out hover:translate-x-1"
+                  className="group flex items-center gap-3"
                 >
-
-                  <FaEnvelope className="text-[#FF7A00] transition-transform duration-300 ease-out group-hover:scale-110" />
-
-                  <span className="transition-colors duration-300 ease-out group-hover:text-[#081A3A]">
-                    sales@dholeraresidentialplot.com
+                  <span
+                    className="
+                      flex
+                      h-8
+                      w-8
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-lg
+                      bg-[#FFF0E2]
+                      text-[11px]
+                      text-[#FF7A00]
+                      transition-all
+                      duration-300
+                      group-hover:bg-[#FF7A00]
+                      group-hover:text-white
+                    "
+                  >
+                    <FaEnvelope />
                   </span>
 
+                  <span
+                    className="
+                      break-all
+                      text-[10px]
+                      text-gray-600
+                      transition-colors
+                      duration-300
+                      group-hover:text-[#FF7A00]
+                      sm:text-[11px]
+                    "
+                  >
+                    sales@dholeraresidentialplot.com
+                  </span>
                 </Link>
+
+                {/* PHONE */}
 
                 <Link
                   href="tel:+919217104219"
-                  className="group flex items-center gap-4 transition-transform duration-300 ease-out hover:translate-x-1"
+                  className="group flex items-center gap-3"
                 >
-
-                  <FaPhoneAlt className="text-[#FF7A00] transition-transform duration-300 ease-out group-hover:scale-110" />
-
-                  <span className="transition-colors duration-300 ease-out group-hover:text-[#081A3A]">
-                    +91 92171 04219
+                  <span
+                    className="
+                      flex
+                      h-8
+                      w-8
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-lg
+                      bg-[#FFF0E2]
+                      text-[11px]
+                      text-[#FF7A00]
+                      transition-all
+                      duration-300
+                      group-hover:bg-[#FF7A00]
+                      group-hover:text-white
+                    "
+                  >
+                    <FaPhoneAlt />
                   </span>
 
+                  <span
+                    className="
+                      text-[11px]
+                      font-semibold
+                      text-gray-600
+                      transition-colors
+                      duration-300
+                      group-hover:text-[#FF7A00]
+                      sm:text-[12px]
+                    "
+                  >
+                    +91 92171 04219
+                  </span>
                 </Link>
-
               </div>
+            </motion.div>
 
-              {/* Social */}
+            {/* =================================================
+                PROPERTIES
+            ================================================= */}
 
-              <div className="mt-8 flex gap-3">
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{
+                once: true,
+                amount: 0.15,
+              }}
+              transition={{
+                delay: 0.05,
+              }}
+            >
+              <p
+                className="
+                  text-[9px]
+                  font-bold
+                  uppercase
+                  tracking-[0.18em]
+                  text-[#FF7A00]
+                "
+              >
+                Explore
+              </p>
 
-                <Link
-                  href="https://www.facebook.com/people/Omana-Properties/61572719098180/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-12 w-12 items-center justify-center rounded bg-[#1877F2] text-white shadow-md transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-110 hover:shadow-lg"
-                >
-                  <FaFacebookF />
-                </Link>
-
-                <Link
-                  href="https://www.instagram.com/omana_projects/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-12 w-12 items-center justify-center rounded bg-linear-to-r from-pink-500 via-red-500 to-yellow-500 text-white shadow-md transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-110 hover:shadow-lg"
-                >
-                  <FaInstagram />
-                </Link>
-
-                <Link
-                  href="https://www.youtube.com/@OmanaProjects"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-12 w-12 items-center justify-center rounded bg-red-600 text-white shadow-md transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-110 hover:shadow-lg"
-                >
-                  <FaYoutube />
-                </Link>
-
-              </div>
-
-            </div>
-
-            {/* Properties */}
-
-            <div>
-
-              <h3 className="mb-8 text-3xl font-bold text-[#0A2E73]">
+              <h3
+                className="
+                  mt-1
+                  text-[18px]
+                  font-extrabold
+                  text-[#33261D]
+                "
+              >
                 Properties
               </h3>
 
-              <ul className="space-y-4">
+              <div className="mt-2 h-0.5 w-8 rounded-full bg-[#FF7A00]" />
 
+              <ul className="mt-3.5 space-y-2">
                 {propertyLinks.map((item) => (
-
-                  <li key={item.label}>
-
-                    <Link
-                      href={item.href}
-                      className="inline-block text-gray-600 transition-all duration-300 ease-out hover:translate-x-2 hover:text-[#FF7A00]"
-                    >
-                      {item.label}
-                    </Link>
-
-                  </li>
-
+                  <FooterLink
+                    key={item.label}
+                    href={item.href}
+                    label={item.label}
+                  />
                 ))}
-
               </ul>
+            </motion.div>
 
-            </div>
+            {/* =================================================
+                QUICK LINKS
+            ================================================= */}
 
-            {/* Quick Links */}
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{
+                once: true,
+                amount: 0.15,
+              }}
+              transition={{
+                delay: 0.1,
+              }}
+            >
+              <p
+                className="
+                  text-[9px]
+                  font-bold
+                  uppercase
+                  tracking-[0.18em]
+                  text-[#FF7A00]
+                "
+              >
+                Navigation
+              </p>
 
-            <div>
-
-              <h3 className="mb-8 text-3xl font-bold text-[#0A2E73]">
+              <h3
+                className="
+                  mt-1
+                  text-[18px]
+                  font-extrabold
+                  text-[#33261D]
+                "
+              >
                 Quick Links
               </h3>
 
-              <ul className="space-y-4">
+              <div className="mt-2 h-0.5 w-8 rounded-full bg-[#FF7A00]" />
 
+              <ul className="mt-3.5 space-y-2">
                 {quickLinks.map((item) => (
-
-                  <li key={item.label}>
-
-                    <Link
-                      href={item.href}
-                      className="inline-block text-gray-600 transition-all duration-300 ease-out hover:translate-x-2 hover:text-[#FF7A00]"
-                    >
-                      {item.label}
-                    </Link>
-
-                  </li>
-
+                  <FooterLink
+                    key={item.label}
+                    href={item.href}
+                    label={item.label}
+                  />
                 ))}
-
               </ul>
+            </motion.div>
 
-            </div>
+            {/* =================================================
+                SOCIAL MEDIA
+            ================================================= */}
 
-            {/* About */}
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{
+                once: true,
+                amount: 0.15,
+              }}
+              transition={{
+                delay: 0.15,
+              }}
+            >
+              <p
+                className="
+                  text-[9px]
+                  font-bold
+                  uppercase
+                  tracking-[0.18em]
+                  text-[#FF7A00]
+                "
+              >
+                Stay Connected
+              </p>
 
-            <div>
-
-              <h3 className="mb-8 text-3xl font-bold text-[#0A2E73]">
-                About Us
+              <h3
+                className="
+                  mt-1
+                  text-[18px]
+                  font-extrabold
+                  text-[#33261D]
+                "
+              >
+                Follow Us
               </h3>
 
-              <ul className="space-y-4">
+              <div className="mt-2 h-0.5 w-8 rounded-full bg-[#FF7A00]" />
 
-                {aboutLinks.map((item) => (
+              {/* SOCIAL ICONS */}
 
-                  <li key={item.label}>
-
+              <div
+                className="
+                  mt-4
+                  flex
+                  flex-wrap
+                  gap-2
+                "
+              >
+                {socialLinks.map((social, index) => (
+                  <motion.div
+                    key={social.label}
+                    initial={{
+                      opacity: 0,
+                      y: 10,
+                      scale: 0.9,
+                    }}
+                    whileInView={{
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                    }}
+                    viewport={{
+                      once: true,
+                    }}
+                    transition={{
+                      delay: 0.05 * index,
+                      duration: 0.3,
+                    }}
+                    whileHover={{
+                      y: -5,
+                      scale: 1.1,
+                    }}
+                    whileTap={{
+                      scale: 0.92,
+                    }}
+                  >
                     <Link
-                      href={item.href}
-                      className="inline-block text-gray-600 transition-all duration-300 ease-out hover:translate-x-2 hover:text-[#FF7A00]"
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={social.label}
+                      title={social.label}
+                      className={`
+                        group/social
+                        flex
+                        h-9
+                        w-9
+                        items-center
+                        justify-center
+                        rounded-lg
+                        text-[13px]
+                        text-white
+                        shadow-sm
+                        transition-all
+                        duration-300
+                        hover:shadow-lg
+                        ${social.bg}
+                      `}
                     >
-                      {item.label}
+                      <span
+                        className="
+                          transition-transform
+                          duration-300
+                          group-hover/social:scale-110
+                        "
+                      >
+                        {social.icon}
+                      </span>
                     </Link>
-
-                  </li>
-
+                  </motion.div>
                 ))}
+              </div>
 
-              </ul>
-
-            </div>
-
+              {/* 
+                  CHAT ON WHATSAPP BUTTON REMOVED
+                  WhatsApp social icon above still remains.
+              */}
+            </motion.div>
           </div>
-
         </div>
+      </section>
 
-      </div>
+      {/* =====================================================
+          BOTTOM FOOTER
+      ===================================================== */}
 
-      {/* Bottom */}
-
-      <div className="border-t bg-white">
-
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-6 md:flex-row">
-
-          <p className="text-gray-600">
-            © 2026 Omana Projects. All Rights Reserved.
+      <div
+        className="
+          border-t
+          border-[#FF7A00]/10
+          bg-white
+        "
+      >
+        <div
+          className="
+            mx-auto
+            flex
+            max-w-7xl
+            flex-col
+            items-center
+            justify-between
+            gap-1.5
+            px-4
+            py-3.5
+            text-center
+            sm:px-6
+            md:flex-row
+            md:text-left
+            lg:pl-16
+            lg:pr-6
+            xl:pl-20
+            xl:pr-8
+          "
+        >
+          <p className="text-[10px] text-gray-500 sm:text-[11px]">
+            © 2026{" "}
+            <span className="font-semibold text-[#34261D]">
+              Omana Projects
+            </span>
+            . All Rights Reserved.
           </p>
 
-
+          <p className="text-[9px] text-gray-400 sm:text-[10px]">
+            Dholera Residential &amp; Investment Properties
+          </p>
         </div>
-
       </div>
-
     </footer>
   );
 }
