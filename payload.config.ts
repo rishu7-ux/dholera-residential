@@ -7,6 +7,8 @@ import {
   Estate2Enquiries,
 } from "./collections/Estate2Leads.ts";
 import { Estate2Blogs } from "./collections/Estate2Blogs.ts";
+import { DholeraEstatesBlogs } from "./collections/DholeraEstatesBlogs.ts";
+import { DholeraEstatesContactMessages, DholeraEstatesEnquiries } from "./collections/DholeraEstatesLeads.ts";
 
 /* =========================================================
    USERS COLLECTION
@@ -521,6 +523,7 @@ export default buildConfig({
     components: {
       beforeNavLinks: [
         "/components/admin/Estate2NavLink.tsx#default",
+        "/components/admin/DholeraEstatesNavLink.tsx#default",
       ],
       views: {
         estate2Dashboard: {
@@ -530,6 +533,15 @@ export default buildConfig({
           exact: true,
           meta: {
             title: "Dholera Estate 2 Dashboard",
+          },
+        },
+        dholeraEstatesDashboard: {
+          Component:
+            "/components/admin/DholeraEstatesDashboard.tsx#default",
+          path: "/dholera-estates-dashboard",
+          exact: true,
+          meta: {
+            title: "Dholera Estates Dashboard",
           },
         },
       },
@@ -572,6 +584,9 @@ export default buildConfig({
     Estate2Enquiries,
     Estate2ContactMessages,
     Estate2Blogs,
+    DholeraEstatesBlogs,
+    DholeraEstatesEnquiries,
+    DholeraEstatesContactMessages,
     Media,
     Blogs,
   ],

@@ -73,6 +73,9 @@ export interface Config {
     'estate2-enquiries': Estate2Enquiry;
     'estate2-contact-messages': Estate2ContactMessage;
     'estate2-blogs': Estate2Blog;
+    'dholera-estates-blogs': DholeraEstatesBlog;
+    'dholera-estates-enquiries': DholeraEstatesEnquiry;
+    'dholera-estates-contact-messages': DholeraEstatesContactMessage;
     media: Media;
     blogs: Blog;
     'payload-kv': PayloadKv;
@@ -88,6 +91,9 @@ export interface Config {
     'estate2-enquiries': Estate2EnquiriesSelect<false> | Estate2EnquiriesSelect<true>;
     'estate2-contact-messages': Estate2ContactMessagesSelect<false> | Estate2ContactMessagesSelect<true>;
     'estate2-blogs': Estate2BlogsSelect<false> | Estate2BlogsSelect<true>;
+    'dholera-estates-blogs': DholeraEstatesBlogsSelect<false> | DholeraEstatesBlogsSelect<true>;
+    'dholera-estates-enquiries': DholeraEstatesEnquiriesSelect<false> | DholeraEstatesEnquiriesSelect<true>;
+    'dholera-estates-contact-messages': DholeraEstatesContactMessagesSelect<false> | DholeraEstatesContactMessagesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     blogs: BlogsSelect<false> | BlogsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -263,6 +269,56 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "dholera-estates-blogs".
+ */
+export interface DholeraEstatesBlog {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  featuredImage: string | Media;
+  status: 'draft' | 'published';
+  publishedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "dholera-estates-enquiries".
+ */
+export interface DholeraEstatesEnquiry {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  property: string;
+  message?: string | null;
+  source: 'dholeraestates-popup-form' | 'dholeraestates-side-enquiry-form' | 'dholeraestates-website';
+  status?: ('new' | 'contacted' | 'follow-up' | 'qualified' | 'closed') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "dholera-estates-contact-messages".
+ */
+export interface DholeraEstatesContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  propertyType: 'dholera-estates';
+  budget: 'below-20-lakhs' | '20-50-lakhs' | '50-lakhs-1-crore' | 'above-1-crore';
+  comments?: string | null;
+  consent: boolean;
+  source: string;
+  status?: ('new' | 'contacted' | 'follow-up' | 'qualified' | 'closed') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "blogs".
  */
 export interface Blog {
@@ -327,6 +383,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'estate2-blogs';
         value: string | Estate2Blog;
+      } | null)
+    | ({
+        relationTo: 'dholera-estates-blogs';
+        value: string | DholeraEstatesBlog;
+      } | null)
+    | ({
+        relationTo: 'dholera-estates-enquiries';
+        value: string | DholeraEstatesEnquiry;
+      } | null)
+    | ({
+        relationTo: 'dholera-estates-contact-messages';
+        value: string | DholeraEstatesContactMessage;
       } | null)
     | ({
         relationTo: 'media';
@@ -476,6 +544,53 @@ export interface Estate2BlogsSelect<T extends boolean = true> {
   featuredImage?: T;
   status?: T;
   publishedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "dholera-estates-blogs_select".
+ */
+export interface DholeraEstatesBlogsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  excerpt?: T;
+  content?: T;
+  featuredImage?: T;
+  status?: T;
+  publishedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "dholera-estates-enquiries_select".
+ */
+export interface DholeraEstatesEnquiriesSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  phone?: T;
+  property?: T;
+  message?: T;
+  source?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "dholera-estates-contact-messages_select".
+ */
+export interface DholeraEstatesContactMessagesSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  phone?: T;
+  propertyType?: T;
+  budget?: T;
+  comments?: T;
+  consent?: T;
+  source?: T;
+  status?: T;
   updatedAt?: T;
   createdAt?: T;
 }
