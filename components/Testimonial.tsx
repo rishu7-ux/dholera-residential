@@ -70,7 +70,7 @@ export default function Testimonial() {
         relative
         overflow-hidden
         bg-[#FFF9F4]
-        py-16
+        py-10
         sm:py-20
       "
     >
@@ -87,7 +87,7 @@ export default function Testimonial() {
           lg:px-8
         "
       >
-        <div className="mb-10 sm:mb-14">
+        <div className="mb-7 sm:mb-14">
           <p
             className="
               text-[10px]
@@ -104,7 +104,7 @@ export default function Testimonial() {
           <h2
             className="
               mt-3
-              text-[30px]
+              text-[26px]
               font-black
               uppercase
               leading-tight
@@ -122,10 +122,10 @@ export default function Testimonial() {
 
           <p
             className="
-              mt-4
+              mt-3
               max-w-3xl
-              text-[14px]
-              leading-7
+              text-[13px]
+              leading-6
               text-gray-600
 
               sm:text-base
@@ -138,15 +138,17 @@ export default function Testimonial() {
 
           {/* ORANGE DOTS */}
 
-          <div className="mt-5 flex gap-2">
+          <div className="mt-4 flex gap-1.5 sm:mt-5 sm:gap-2">
             {[1, 2, 3, 4, 5, 6, 7].map((item) => (
               <span
                 key={item}
                 className="
-                  h-2
-                  w-2
+                  h-1.5
+                  w-1.5
                   rounded-full
                   bg-[#FF7A00]
+                  sm:h-2
+                  sm:w-2
                 "
               />
             ))}
@@ -245,9 +247,9 @@ export default function Testimonial() {
                 isolate
 
                 flex
-                min-h-82.5
+                min-h-72
 
-                w-77.5
+                w-70
                 shrink-0
                 flex-col
 
@@ -260,7 +262,7 @@ export default function Testimonial() {
 
                 bg-white
 
-                p-5
+                p-4
 
                 shadow-[0_8px_28px_rgba(66,38,18,0.06)]
 
@@ -381,10 +383,10 @@ export default function Testimonial() {
                   relative
                   z-10
 
-                  mt-5
+                  mt-4
 
-                  text-[13px]
-                  leading-7
+                  text-[12px]
+                  leading-6
 
                   text-gray-600
 
@@ -410,19 +412,22 @@ export default function Testimonial() {
                   z-10
 
                   mt-auto
-                  pt-6
+                  pt-4
+                  sm:pt-6
                 "
               >
                 <div
                   className="
                     flex
                     items-center
-                    gap-4
+                    gap-3
 
                     border-t
                     border-[#FF7A00]/10
 
-                    pt-5
+                    pt-4
+                    sm:gap-4
+                    sm:pt-5
 
                     transition-colors
                     duration-500
@@ -436,8 +441,8 @@ export default function Testimonial() {
                     className="
                       relative
 
-                      h-16
-                      w-16
+                      h-12
+                      w-12
 
                       shrink-0
 
@@ -482,7 +487,7 @@ export default function Testimonial() {
                   <div>
                     <h4
                       className="
-                        text-[18px]
+                        text-[16px]
                         font-bold
                         text-[#2D241F]
 
