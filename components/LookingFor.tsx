@@ -130,7 +130,9 @@ export default function LookingFor() {
                 className="
                   group
                   relative
-                  aspect-square
+                  flex
+                  min-h-60
+                  flex-col
                   overflow-hidden
                   rounded-[18px]
                   border
@@ -145,6 +147,8 @@ export default function LookingFor() {
                   hover:shadow-[0_14px_30px_rgba(255,122,0,0.12)]
 
                   sm:p-5
+                  sm:aspect-square
+                  sm:min-h-0
                 "
               >
                 {/* TOP ACCENT */}
@@ -199,9 +203,8 @@ export default function LookingFor() {
                 <Link
                   href={item.href}
                   className="
-                    absolute
-                    bottom-4
-                    left-4
+                    mt-auto
+                    pt-3
                     inline-flex
                     items-center
                     gap-1.5
@@ -213,8 +216,6 @@ export default function LookingFor() {
 
                     hover:text-[#FF7A00]
 
-                    sm:bottom-5
-                    sm:left-5
                     sm:text-xs
                   "
                 >
