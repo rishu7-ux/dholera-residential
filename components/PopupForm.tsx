@@ -409,10 +409,10 @@ export default function PopupForm({
             className="
               relative
 
-              max-h-[94vh]
+              max-h-[90svh]
 
               w-full
-              max-w-87.5
+              max-w-82.5
 
               overflow-x-hidden
               overflow-y-auto
@@ -426,6 +426,7 @@ export default function PopupForm({
 
               shadow-[0_22px_65px_rgba(8,26,58,0.30)]
 
+              sm:max-h-[94vh]
               sm:max-w-107.5
               sm:rounded-[28px]
             "
