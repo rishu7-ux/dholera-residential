@@ -13,10 +13,25 @@ export async function GET(request: Request) {
       sort: "-publishedAt", limit: slug ? 1 : 100, depth: 1,
     });
     const blogs = result.docs.map((blog) => {
+      const record = blog as unknown as {
+        id: string | number;
+        slug: string;
+        blogTitle?: string | null;
+        shortDescription?: string | null;
+        blogContent?: string | null;
+        title?: string | null;
+        excerpt?: string | null;
+        content?: string | null;
+        publishedAt?: string | null;
+        createdAt: string;
+      };
       const media = typeof blog.featuredImage === "object" && blog.featuredImage !== null ? blog.featuredImage as Media : null;
-      return { id: blog.id, title: blog.title, slug: blog.slug, excerpt: blog.excerpt,
-        content: blog.content, publishedAt: blog.publishedAt || blog.createdAt,
-        imageUrl: media?.url || null, imageAlt: media?.alt || blog.title };
+      const title = record.blogTitle || record.title;
+      return { id: record.id, title, slug: record.slug,
+        excerpt: record.shortDescription || record.excerpt,
+        content: record.blogContent || record.content,
+        publishedAt: record.publishedAt || record.createdAt,
+        imageUrl: media?.url || null, imageAlt: media?.alt || title };
     });
     return Response.json({ success: true, blogs }, { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } });
   } catch (error) {

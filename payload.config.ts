@@ -1,6 +1,7 @@
 import { buildConfig } from "payload";
 import type { CollectionConfig } from "payload";
 import { mongooseAdapter } from "@payloadcms/db-mongodb";
+import { vercelBlobStorage } from "@payloadcms/storage-vercel-blob";
 
 import {
   Estate2ContactMessages,
@@ -9,6 +10,7 @@ import {
 import { Estate2Blogs } from "./collections/Estate2Blogs.ts";
 import { DholeraEstatesBlogs } from "./collections/DholeraEstatesBlogs.ts";
 import { DholeraEstatesContactMessages, DholeraEstatesEnquiries } from "./collections/DholeraEstatesLeads.ts";
+import { IndustrialBlogs, IndustrialContactMessages, IndustrialEnquiries } from "./collections/IndustrialCMS.ts";
 
 /* =========================================================
    USERS COLLECTION
@@ -524,6 +526,7 @@ export default buildConfig({
       beforeNavLinks: [
         "/components/admin/Estate2NavLink.tsx#default",
         "/components/admin/DholeraEstatesNavLink.tsx#default",
+        "/components/admin/IndustrialNavLink.tsx#default",
       ],
       views: {
         estate2Dashboard: {
@@ -542,6 +545,15 @@ export default buildConfig({
           exact: true,
           meta: {
             title: "Dholera Estates Dashboard",
+          },
+        },
+        industrialDashboard: {
+          Component:
+            "/components/admin/IndustrialDashboard.tsx#default",
+          path: "/industrial-dashboard",
+          exact: true,
+          meta: {
+            title: "Dholera Industrial Dashboard",
           },
         },
       },
@@ -587,7 +599,19 @@ export default buildConfig({
     DholeraEstatesBlogs,
     DholeraEstatesEnquiries,
     DholeraEstatesContactMessages,
+    IndustrialEnquiries,
+    IndustrialContactMessages,
+    IndustrialBlogs,
     Media,
     Blogs,
+  ],
+
+  plugins: [
+    vercelBlobStorage({
+      collections: {
+        media: true,
+      },
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    }),
   ],
 });

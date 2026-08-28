@@ -76,6 +76,9 @@ export interface Config {
     'dholera-estates-blogs': DholeraEstatesBlog;
     'dholera-estates-enquiries': DholeraEstatesEnquiry;
     'dholera-estates-contact-messages': DholeraEstatesContactMessage;
+    'industrial-enquiries': IndustrialEnquiry;
+    'industrial-contact-messages': IndustrialContactMessage;
+    'industrial-blogs': IndustrialBlog;
     media: Media;
     blogs: Blog;
     'payload-kv': PayloadKv;
@@ -94,6 +97,9 @@ export interface Config {
     'dholera-estates-blogs': DholeraEstatesBlogsSelect<false> | DholeraEstatesBlogsSelect<true>;
     'dholera-estates-enquiries': DholeraEstatesEnquiriesSelect<false> | DholeraEstatesEnquiriesSelect<true>;
     'dholera-estates-contact-messages': DholeraEstatesContactMessagesSelect<false> | DholeraEstatesContactMessagesSelect<true>;
+    'industrial-enquiries': IndustrialEnquiriesSelect<false> | IndustrialEnquiriesSelect<true>;
+    'industrial-contact-messages': IndustrialContactMessagesSelect<false> | IndustrialContactMessagesSelect<true>;
+    'industrial-blogs': IndustrialBlogsSelect<false> | IndustrialBlogsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     blogs: BlogsSelect<false> | BlogsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -273,10 +279,13 @@ export interface Media {
  */
 export interface DholeraEstatesBlog {
   id: string;
-  title: string;
+  blogTitle: string;
+  /**
+   * URL friendly slug. Example: ridhi-966-1
+   */
   slug: string;
-  excerpt: string;
-  content: string;
+  shortDescription: string;
+  blogContent: string;
   featuredImage: string | Media;
   status: 'draft' | 'published';
   publishedAt?: string | null;
@@ -314,6 +323,59 @@ export interface DholeraEstatesContactMessage {
   consent: boolean;
   source: string;
   status?: ('new' | 'contacted' | 'follow-up' | 'qualified' | 'closed') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "industrial-enquiries".
+ */
+export interface IndustrialEnquiry {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  property: string;
+  message?: string | null;
+  source: 'industrial-popup-form' | 'industrial-side-enquiry-form' | 'industrial-property-card' | 'industrial-website';
+  status?: ('new' | 'contacted' | 'follow-up' | 'qualified' | 'closed') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "industrial-contact-messages".
+ */
+export interface IndustrialContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  propertyType: 'industrial-plot' | 'logistics-plot' | 'warehouse-land' | 'commercial-plot';
+  budget: 'below-25-lakhs' | '25-50-lakhs' | '50-lakhs-1-crore' | 'above-1-crore';
+  comments?: string | null;
+  consent: boolean;
+  source: string;
+  status?: ('new' | 'contacted' | 'follow-up' | 'qualified' | 'closed') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "industrial-blogs".
+ */
+export interface IndustrialBlog {
+  id: string;
+  title: string;
+  /**
+   * URL friendly slug. Example: ridhi-966-1
+   */
+  slug: string;
+  excerpt: string;
+  content: string;
+  featuredImage: string | Media;
+  status: 'draft' | 'published';
+  publishedAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -395,6 +457,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'dholera-estates-contact-messages';
         value: string | DholeraEstatesContactMessage;
+      } | null)
+    | ({
+        relationTo: 'industrial-enquiries';
+        value: string | IndustrialEnquiry;
+      } | null)
+    | ({
+        relationTo: 'industrial-contact-messages';
+        value: string | IndustrialContactMessage;
+      } | null)
+    | ({
+        relationTo: 'industrial-blogs';
+        value: string | IndustrialBlog;
       } | null)
     | ({
         relationTo: 'media';
@@ -552,10 +626,10 @@ export interface Estate2BlogsSelect<T extends boolean = true> {
  * via the `definition` "dholera-estates-blogs_select".
  */
 export interface DholeraEstatesBlogsSelect<T extends boolean = true> {
-  title?: T;
+  blogTitle?: T;
   slug?: T;
-  excerpt?: T;
-  content?: T;
+  shortDescription?: T;
+  blogContent?: T;
   featuredImage?: T;
   status?: T;
   publishedAt?: T;
@@ -591,6 +665,53 @@ export interface DholeraEstatesContactMessagesSelect<T extends boolean = true> {
   consent?: T;
   source?: T;
   status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "industrial-enquiries_select".
+ */
+export interface IndustrialEnquiriesSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  phone?: T;
+  property?: T;
+  message?: T;
+  source?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "industrial-contact-messages_select".
+ */
+export interface IndustrialContactMessagesSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  phone?: T;
+  propertyType?: T;
+  budget?: T;
+  comments?: T;
+  consent?: T;
+  source?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "industrial-blogs_select".
+ */
+export interface IndustrialBlogsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  excerpt?: T;
+  content?: T;
+  featuredImage?: T;
+  status?: T;
+  publishedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }
