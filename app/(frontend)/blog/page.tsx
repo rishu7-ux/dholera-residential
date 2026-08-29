@@ -437,8 +437,10 @@ export default async function BlogPage() {
                             33vw
                           "
                           className="
-                            object-cover
+                            object-contain
                             object-center
+                            p-2
+                            sm:p-3
                           "
                         />
 
