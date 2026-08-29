@@ -418,14 +418,12 @@ export default async function BlogPage() {
                         href={blogUrl}
                         className="
                           relative
+                          isolate
                           block
-                          h-43.75
+                          aspect-video
                           w-full
                           overflow-hidden
                           bg-[#FFF4EA]
-                          sm:h-48
-                          md:h-50
-                          lg:h-55
                         "
                       >
                         <Image
@@ -439,9 +437,10 @@ export default async function BlogPage() {
                           "
                           className="
                             object-cover
+                            object-center
                             transition-transform
                             duration-500
-                            group-hover:scale-105
+                            sm:group-hover:scale-105
                           "
                         />
 
@@ -449,6 +448,7 @@ export default async function BlogPage() {
                           className="
                             absolute
                             inset-0
+                            z-10
                             bg-linear-to-t
                             from-black/35
                             via-transparent
@@ -461,6 +461,7 @@ export default async function BlogPage() {
                             absolute
                             left-3
                             top-3
+                            z-20
                             rounded-full
                             bg-white/95
                             px-2.5

@@ -269,8 +269,10 @@ export default async function BlogSection() {
                       href={blogUrl}
                       className="
                         relative
+                        isolate
                         block
-                        h-46.25
+                        aspect-3/2
+                        w-full
                         overflow-hidden
                         bg-[#FFF4EA]
                       "
@@ -287,9 +289,10 @@ export default async function BlogSection() {
                         "
                         className="
                           object-cover
+                          object-center
                           transition-transform
                           duration-700
-                          group-hover:scale-110
+                          sm:group-hover:scale-105
                         "
                       />
 
@@ -299,6 +302,7 @@ export default async function BlogSection() {
                         className="
                           absolute
                           inset-0
+                          z-10
                           bg-linear-to-t
                           from-[#081A3A]/55
                           via-transparent
@@ -313,6 +317,7 @@ export default async function BlogSection() {
                           absolute
                           left-4
                           top-4
+                          z-20
                           rounded-full
                           bg-[#FF7A00]
                           px-3

@@ -181,7 +181,7 @@ export default async function BlogDetailPage({
                   fill
                   priority
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1000px"
-                  className="object-cover"
+                  className="object-cover object-center"
                 />
               </div>
 
