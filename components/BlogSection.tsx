@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { connection } from "next/server";
 
 import {
   FaUserAlt,
@@ -36,6 +37,8 @@ type Blog = {
 ========================================================= */
 
 export default async function BlogSection() {
+  await connection();
+
   const payload = await getPayload({
     config,
   });
