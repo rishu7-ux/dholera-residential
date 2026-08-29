@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dholera Residential Plot",
+  title: "Dholera Residential Plots | with premium mixed use land | tp-4",
   description: "Premium plots and investment opportunities in Dholera Smart City",
 };
 
