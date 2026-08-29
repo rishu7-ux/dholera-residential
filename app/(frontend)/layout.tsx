@@ -16,7 +16,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Dholera Residential Plots | with premium mixed use land | tp-4",
-  description: "Premium plots and investment opportunities in Dholera Smart City",
+  description:
+    "Explore Mixed use & SCO plots in Dholera Smart City at TP4B2, Bhangadh — near Tata Semiconductor plant & Metro Rail corridor",
 };
 
 export default function RootLayout({
