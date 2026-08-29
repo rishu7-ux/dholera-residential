@@ -421,6 +421,7 @@ export default async function BlogPage() {
                           isolate
                           block
                           aspect-video
+                          shrink-0
                           w-full
                           overflow-hidden
                           bg-[#FFF4EA]
@@ -438,9 +439,6 @@ export default async function BlogPage() {
                           className="
                             object-cover
                             object-center
-                            transition-transform
-                            duration-500
-                            sm:group-hover:scale-105
                           "
                         />
 
