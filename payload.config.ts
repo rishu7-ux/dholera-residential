@@ -1,6 +1,18 @@
 import { buildConfig } from "payload";
 import type { CollectionConfig } from "payload";
 import { mongooseAdapter } from "@payloadcms/db-mongodb";
+import {
+  BoldFeature,
+  FixedToolbarFeature,
+  HeadingFeature,
+  InlineToolbarFeature,
+  ItalicFeature,
+  LinkFeature,
+  OrderedListFeature,
+  ParagraphFeature,
+  UnorderedListFeature,
+  lexicalEditor,
+} from "@payloadcms/richtext-lexical";
 import { vercelBlobStorage } from "@payloadcms/storage-vercel-blob";
 
 import {
@@ -443,6 +455,33 @@ const Blogs: CollectionConfig = {
       label: "Blog Content",
       type: "textarea",
       required: true,
+    },
+
+    {
+      name: "richContent",
+      label: "Rich Blog Content",
+      type: "richText",
+      admin: {
+        description:
+          "Optional structured article content. Use H2 for major sections and H3 for subsections; the Blog Title is the page H1.",
+      },
+      editor: lexicalEditor({
+        features: () => [
+          ParagraphFeature(),
+          HeadingFeature({
+            enabledHeadingSizes: ["h2", "h3"],
+          }),
+          BoldFeature(),
+          ItalicFeature(),
+          OrderedListFeature(),
+          UnorderedListFeature(),
+          LinkFeature({
+            enabledCollections: [],
+          }),
+          FixedToolbarFeature(),
+          InlineToolbarFeature(),
+        ],
+      }),
     },
 
     /* =====================================================

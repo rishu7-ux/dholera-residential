@@ -392,6 +392,24 @@ export interface Blog {
   slug: string;
   excerpt: string;
   content: string;
+  /**
+   * Optional structured article content. Use H2 for major sections and H3 for subsections; the Blog Title is the page H1.
+   */
+  richContent?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
   featuredImage: string | Media;
   status: 'draft' | 'published';
   publishedAt?: string | null;
@@ -742,6 +760,7 @@ export interface BlogsSelect<T extends boolean = true> {
   slug?: T;
   excerpt?: T;
   content?: T;
+  richContent?: T;
   featuredImage?: T;
   status?: T;
   publishedAt?: T;

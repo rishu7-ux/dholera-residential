@@ -9,6 +9,9 @@ import {
 } from "react-icons/fa";
 
 import { getPayload } from "payload";
+import type { SerializedEditorState } from "@payloadcms/richtext-lexical/lexical";
+import { RichText } from "@payloadcms/richtext-lexical/react";
+import { hasText } from "@payloadcms/richtext-lexical/shared";
 import config from "@/payload.config";
 
 import TopBar from "@/components/TopBar";
@@ -27,6 +30,7 @@ type Blog = {
   slug: string;
   excerpt?: string | null;
   content?: string | null;
+  richContent?: SerializedEditorState | null;
   status?: string | null;
   publishedAt?: string | null;
   createdAt?: string | null;
@@ -197,7 +201,12 @@ export default async function BlogDetailPage({
                   </div>
                 )}
 
-                {blog.content ? (
+                {hasText(blog.richContent) ? (
+                  <RichText
+                    className="break-words text-[16px] leading-[1.8] text-[#5F554D] [overflow-wrap:anywhere] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_a]:font-semibold [&_a]:text-[#D85F00] [&_a]:underline [&_a]:decoration-2 [&_a]:underline-offset-4 [&_a:hover]:text-[#B84D00] [&_a:focus-visible]:rounded-sm [&_a:focus-visible]:outline-2 [&_a:focus-visible]:outline-offset-2 [&_a:focus-visible]:outline-[#FF7A00] [&_em]:italic [&_h2]:mb-4 [&_h2]:mt-10 [&_h2]:scroll-mt-24 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:leading-tight [&_h2]:tracking-[-0.02em] [&_h2]:text-[#1F2937] sm:[&_h2]:mt-12 sm:[&_h2]:text-3xl [&_h3]:mb-3 [&_h3]:mt-8 [&_h3]:scroll-mt-24 [&_h3]:text-xl [&_h3]:font-extrabold [&_h3]:leading-snug [&_h3]:text-[#2F3742] sm:[&_h3]:text-2xl [&_li]:pl-1 [&_li]:leading-[1.8] [&_ol]:my-6 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-6 sm:[&_ol]:pl-8 [&_p]:my-5 [&_p]:leading-[1.8] [&_strong]:font-extrabold [&_strong]:text-[#3D332C] [&_ul]:my-6 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6 sm:[&_ul]:pl-8"
+                    data={blog.richContent}
+                  />
+                ) : blog.content ? (
                   <div className="whitespace-pre-line text-[16px] leading-8 text-[#5F554D]">
                     {blog.content}
                   </div>
