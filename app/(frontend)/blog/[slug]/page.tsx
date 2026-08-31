@@ -178,14 +178,14 @@ export default async function BlogDetailPage({
 
               {/* IMAGE */}
 
-              <div className="relative aspect-video w-full overflow-hidden bg-[#FFF4EA]">
+              <div className="relative aspect-3/2 w-full overflow-hidden bg-[#FFF4EA]">
                 <Image
                   src={imageUrl}
                   alt={imageAlt}
                   fill
                   priority
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1000px"
-                  className="object-cover object-center"
+                  className="object-contain object-center"
                 />
               </div>
 
