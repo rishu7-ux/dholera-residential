@@ -420,7 +420,7 @@ export default async function BlogPage() {
                           relative
                           isolate
                           block
-                          aspect-video
+                          aspect-3/2
                           shrink-0
                           w-full
                           overflow-hidden
@@ -439,8 +439,6 @@ export default async function BlogPage() {
                           className="
                             object-contain
                             object-center
-                            p-2
-                            sm:p-3
                           "
                         />
 
