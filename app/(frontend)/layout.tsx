@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: "Dholera Residential Plots | with premium mixed use land | tp-4",
   description:
     "Explore Mixed use & SCO plots in Dholera Smart City at TP4B2, Bhangadh — near Tata Semiconductor plant & Metro Rail corridor",
+  verification: {
+    google: "cKLtmMkJ9c0y_sqsScNCzUajpEsvz5v9VcPlTxd9Xc4",
+  },
 };
 
 export default function RootLayout({
