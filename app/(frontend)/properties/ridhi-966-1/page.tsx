@@ -19,6 +19,7 @@ import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CTASection from "@/components/CTASection";
+import PopupForm from "@/components/PopupForm";
 
 
 /* =========================================================
@@ -303,7 +304,7 @@ function BulletCards({ items }: { items: string[] }) {
 ========================================================= */
 
 export default function Page() {
-  const [, setPopupOpen] = useState(false);
+  const [popupOpen, setPopupOpen] = useState(false);
 
   return (
     <>
@@ -434,20 +435,10 @@ export default function Page() {
             className="
               scale-[1.03]
               object-cover
-              blur-[3px]
-              brightness-[0.68]
-              saturate-[0.75]
             "
           />
 
-          <div className="absolute inset-0 bg-[#081A3A]/22 backdrop-blur-[1px]" />
-
-          {/* SOLD OUT IMAGE OVERLAY */}
-          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-            <div className="-rotate-12 border-y-4 border-white/90 bg-[#C94F00]/95 px-10 py-3 text-center text-2xl font-black uppercase tracking-[0.22em] text-white shadow-[0_14px_40px_rgba(74,24,0,0.38)] backdrop-blur-[2px] sm:px-14 sm:py-4 sm:text-4xl md:text-5xl">
-              Sold Out
-            </div>
-          </div>
+          <div className="absolute inset-0 bg-[#081A3A]/12" />
 
           <div
             className="
@@ -545,10 +536,10 @@ export default function Page() {
                   Availability
                 </p>
                 <p className="mt-1 text-[22px] font-black leading-none text-[#C94F00] sm:text-2xl md:text-3xl">
-                  SOLD OUT
+                  AVAILABLE
                 </p>
                 <p className="mt-1.5 text-[10px] font-semibold text-[#8B6B58] sm:text-xs">
-                  No inventory currently available
+                  Contact us for latest inventory
                 </p>
               </motion.div>
             </div>
@@ -743,8 +734,7 @@ export default function Page() {
             >
               <motion.button
                 type="button"
-                disabled
-                aria-disabled="true"
+                onClick={() => setPopupOpen(true)}
                 whileHover={{
                   y: -2,
                   scale: 1.01,
@@ -761,8 +751,7 @@ export default function Page() {
                   justify-center
                   gap-1.5
                   rounded-lg
-                  cursor-not-allowed
-                  bg-[#C94F00]
+                  bg-[#FF7A00]
                   px-2
                   text-[11px]
                   font-bold
@@ -781,7 +770,7 @@ export default function Page() {
                 "
               >
                 <span className="whitespace-nowrap">
-                  Sold Out
+                  Enquire Now
                 </span>
 
                 <FaArrowRight className="text-[8px] transition-transform duration-300 group-hover:translate-x-1 sm:text-xs" />
@@ -1388,7 +1377,11 @@ export default function Page() {
 
       <Footer />
 
-      {/* Sold out property: enquiry popup intentionally disabled */}
+      <PopupForm
+        open={popupOpen}
+        onClose={() => setPopupOpen(false)}
+        propertyName="Ridhi 966/1 SCO Plots"
+      />
     </>
   );
 }

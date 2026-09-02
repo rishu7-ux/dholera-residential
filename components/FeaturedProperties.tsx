@@ -32,7 +32,7 @@ const properties = [
     type: "TP 4, 4B-2",
     road: "FP Road 70 Mtr",
     price: "Starting Price - ₹44 Lakhs Onward",
-    status: "Sold Out",
+    status: "Available",
     slug: "ridhi-966-1",
   },
 
@@ -190,6 +190,8 @@ function PropertyCard({
   index: number;
   onEnquire: (title: string) => void;
 }) {
+  const isSoldOut = item.status === "Sold Out";
+
   return (
     <motion.article
       custom={index}
@@ -272,19 +274,21 @@ function PropertyCard({
               (max-width: 1024px) 100vw,
               38vw
             "
-            className="
+            className={`
               scale-[1.03]
               object-cover
               object-center
-              blur-[3px]
-              brightness-[0.62]
-              saturate-[0.72]
               transition-transform
               duration-900
               ease-[cubic-bezier(0.22,1,0.36,1)]
 
               group-hover:scale-[1.05]
-            "
+              ${
+                isSoldOut
+                  ? "blur-[3px] brightness-[0.62] saturate-[0.72]"
+                  : ""
+              }
+            `}
           />
 
           {/* OVERLAY */}
@@ -302,92 +306,93 @@ function PropertyCard({
             "
           />
 
-          {/* LARGE SOLD OUT OVERLAY */}
-          <div
-            className="
-              pointer-events-none
-              absolute
-              inset-0
-              z-20
-              flex
-              items-center
-              justify-center
-            "
-          >
+          {isSoldOut && (
             <div
               className="
-                -rotate-10
-                border-y-4
-                border-white/90
-                bg-[#C94F00]/95
-                px-7
-                py-2.5
-                text-center
-                text-xl
-                font-black
-                uppercase
-                tracking-[0.18em]
-                text-white
-                shadow-[0_12px_35px_rgba(74,24,0,0.32)]
-                backdrop-blur-[2px]
-
-                sm:px-10
-                sm:py-3
-                sm:text-2xl
-
-                lg:text-3xl
+                pointer-events-none
+                absolute
+                inset-0
+                z-20
+                flex
+                items-center
+                justify-center
               "
             >
-              Sold Out
+              <div
+                className="
+                  -rotate-10
+                  border-y-4
+                  border-white/90
+                  bg-[#C94F00]/95
+                  px-7
+                  py-2.5
+                  text-center
+                  text-xl
+                  font-black
+                  uppercase
+                  tracking-[0.18em]
+                  text-white
+                  shadow-[0_12px_35px_rgba(74,24,0,0.32)]
+                  backdrop-blur-[2px]
+
+                  sm:px-10
+                  sm:py-3
+                  sm:text-2xl
+
+                  lg:text-3xl
+                "
+              >
+                Sold Out
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* SOLD OUT */}
-
-          <motion.div
-            initial={{
-              opacity: 0,
-              x: -15,
-            }}
-            whileInView={{
-              opacity: 1,
-              x: 0,
-            }}
-            viewport={{ once: true }}
-            transition={{
-              delay: 0.2 + index * 0.05,
-              duration: 0.4,
-            }}
-            className="
-              absolute
-              left-4
-              top-4
-              z-20
-
-              sm:left-5
-              sm:top-5
-            "
-          >
-            <span
+          {isSoldOut && (
+            <motion.div
+              initial={{
+                opacity: 0,
+                x: -15,
+              }}
+              whileInView={{
+                opacity: 1,
+                x: 0,
+              }}
+              viewport={{ once: true }}
+              transition={{
+                delay: 0.2 + index * 0.05,
+                duration: 0.4,
+              }}
               className="
-                inline-flex
-                rounded-xl
-                bg-[#C94F00]
-                px-4
-                py-2
-                text-[10px]
-                font-bold
-                uppercase
-                tracking-[0.12em]
-                text-white
-                shadow-[0_8px_22px_rgba(255,122,0,0.28)]
+                absolute
+                left-4
+                top-4
+                z-20
 
-                sm:text-xs
+                sm:left-5
+                sm:top-5
               "
             >
-              Sold Out
-            </span>
-          </motion.div>
+              <span
+                className="
+                  inline-flex
+                  rounded-xl
+                  bg-[#C94F00]
+                  px-4
+                  py-2
+                  text-[10px]
+                  font-bold
+                  uppercase
+                  tracking-[0.12em]
+                  text-white
+                  shadow-[0_8px_22px_rgba(255,122,0,0.28)]
+
+                  sm:text-xs
+                "
+              >
+                Sold Out
+              </span>
+            </motion.div>
+          )}
 
           {/* PRICE */}
 
@@ -437,7 +442,7 @@ function PropertyCard({
               "
             >
               <span className="font-black uppercase tracking-[0.08em]">
-                {item.status}
+                {isSoldOut ? item.status : item.price}
               </span>
             </div>
           </motion.div>
@@ -508,29 +513,30 @@ function PropertyCard({
             "
           />
 
-          {/* SOLD OUT STATUS */}
-          <div className="mt-3">
-            <span
-              className="
-                inline-flex
-                items-center
-                rounded-full
-                border
-                border-[#C94F00]/15
-                bg-[#FFF0E6]
-                px-3
-                py-1.5
-                text-[10px]
-                font-black
-                uppercase
-                tracking-[0.12em]
-                text-[#C94F00]
-                sm:text-[11px]
-              "
-            >
-              Sold Out
-            </span>
-          </div>
+          {isSoldOut && (
+            <div className="mt-3">
+              <span
+                className="
+                  inline-flex
+                  items-center
+                  rounded-full
+                  border
+                  border-[#C94F00]/15
+                  bg-[#FFF0E6]
+                  px-3
+                  py-1.5
+                  text-[10px]
+                  font-black
+                  uppercase
+                  tracking-[0.12em]
+                  text-[#C94F00]
+                  sm:text-[11px]
+                "
+              >
+                Sold Out
+              </span>
+            </div>
+          )}
 
           {/* LOCATION */}
 
