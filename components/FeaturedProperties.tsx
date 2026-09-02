@@ -31,7 +31,7 @@ const properties = [
     size: "423 - 590 Sq. Yd.",
     type: "TP 4, 4B-2",
     road: "FP Road 70 Mtr",
-    price: "Starting Price - ₹44 Lakhs Onward",
+    price: "Starting Price - ₹65 Lakhs Onward",
     status: "Available",
     slug: "ridhi-966-1",
   },
