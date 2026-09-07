@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -13,6 +14,15 @@ import config from "@/payload.config";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+
+export const metadata: Metadata = {
+  title: "Dholera SIR Blog | Plot Guides & Market Updates",
+  description:
+    "Latest updates on Dholera SIR — SEZ news, airport & metro progress, plot types explained, and buyer guides for residential & SCO plots.",
+  alternates: {
+    canonical: "/blog",
+  },
+};
 
 /* =========================================================
    FORCE LATEST PAYLOAD DATA
