@@ -631,7 +631,7 @@ export default function AIChatbot() {
               {/* EMAIL */}
 
               <a
-                href="mailto:sales@dholeraresidentialplot.com"
+                href="mailto:customercare@omanaprojects.com"
                 className="
                   flex
                   items-center
