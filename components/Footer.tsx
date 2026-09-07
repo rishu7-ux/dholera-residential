@@ -396,6 +396,48 @@ export default function Footer() {
                   </span>
                 </Link>
 
+                {/* EMAIL - CUSTOMER CARE */}
+
+                <Link
+                  href="mailto:customercare@omanaprojects.com"
+                  className="group flex items-center gap-3"
+                >
+                  <span
+                    className="
+                      flex
+                      h-8
+                      w-8
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-lg
+                      bg-[#FFF0E2]
+                      text-[11px]
+                      text-[#FF7A00]
+                      transition-all
+                      duration-300
+                      group-hover:bg-[#FF7A00]
+                      group-hover:text-white
+                    "
+                  >
+                    <FaEnvelope />
+                  </span>
+
+                  <span
+                    className="
+                      break-all
+                      text-[10px]
+                      text-gray-600
+                      transition-colors
+                      duration-300
+                      group-hover:text-[#FF7A00]
+                      sm:text-[11px]
+                    "
+                  >
+                    customercare@omanaprojects.com
+                  </span>
+                </Link>
+
                 {/* PHONE */}
 
                 <Link
