@@ -1,4 +1,16 @@
 import type { CollectionConfig } from "payload";
+import {
+  BoldFeature,
+  FixedToolbarFeature,
+  HeadingFeature,
+  InlineToolbarFeature,
+  ItalicFeature,
+  LinkFeature,
+  OrderedListFeature,
+  ParagraphFeature,
+  UnorderedListFeature,
+  lexicalEditor,
+} from "@payloadcms/richtext-lexical";
 
 export const Estate2Blogs: CollectionConfig = {
   slug: "estate2-blogs",
@@ -49,6 +61,32 @@ export const Estate2Blogs: CollectionConfig = {
       required: true,
     },
     { name: "content", label: "Blog Content", type: "textarea", required: true },
+    {
+      name: "richContent",
+      label: "Rich Blog Content",
+      type: "richText",
+      admin: {
+        description:
+          "Optional structured article content. Use H2 for major sections and H3 for subsections; the Blog Title is the page H1.",
+      },
+      editor: lexicalEditor({
+        features: () => [
+          ParagraphFeature(),
+          HeadingFeature({
+            enabledHeadingSizes: ["h2", "h3"],
+          }),
+          BoldFeature(),
+          ItalicFeature(),
+          OrderedListFeature(),
+          UnorderedListFeature(),
+          LinkFeature({
+            enabledCollections: [],
+          }),
+          FixedToolbarFeature(),
+          InlineToolbarFeature(),
+        ],
+      }),
+    },
     {
       name: "featuredImage",
       label: "Featured Image",

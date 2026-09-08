@@ -1,4 +1,6 @@
 import { getPayload } from "payload";
+import { convertLexicalToHTML } from "@payloadcms/richtext-lexical/html";
+import type { SerializedEditorState } from "@payloadcms/richtext-lexical/lexical";
 
 import config from "../../../payload.config";
 
@@ -6,6 +8,29 @@ type Media = {
   url?: string | null;
   alt?: string | null;
 };
+
+function toRichContentHtml(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+
+  try {
+    const html = convertLexicalToHTML({
+      data: value as SerializedEditorState,
+    });
+    if (!html) return null;
+
+    // An untouched editor still serialises to an empty wrapper element.
+    // Treat markup with no visible content as absent so the Estate 2
+    // frontend falls back to the existing plain-text `content` field.
+    const hasVisibleContent =
+      html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0 ||
+      /<(img|hr|iframe|video)\b/i.test(html);
+
+    return hasVisibleContent ? html : null;
+  } catch (error) {
+    console.error("Estate 2 rich content could not be serialised", error);
+    return null;
+  }
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -44,6 +69,9 @@ export async function GET(request: Request) {
         slug: blog.slug,
         excerpt: blog.excerpt,
         content: blog.content,
+        richContentHtml: toRichContentHtml(
+          (blog as { richContent?: unknown }).richContent,
+        ),
         publishedAt: blog.publishedAt || blog.createdAt,
         imageUrl: media?.url || null,
         imageAlt: media?.alt || blog.title,
