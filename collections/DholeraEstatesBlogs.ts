@@ -1,4 +1,16 @@
 import type { CollectionConfig } from "payload";
+import {
+  BoldFeature,
+  FixedToolbarFeature,
+  HeadingFeature,
+  InlineToolbarFeature,
+  ItalicFeature,
+  LinkFeature,
+  OrderedListFeature,
+  ParagraphFeature,
+  UnorderedListFeature,
+  lexicalEditor,
+} from "@payloadcms/richtext-lexical";
 
 export const DholeraEstatesBlogs: CollectionConfig = {
   slug: "dholera-estates-blogs",
@@ -26,6 +38,32 @@ export const DholeraEstatesBlogs: CollectionConfig = {
     },
     { name: "shortDescription", label: "Short Description", type: "textarea", required: true },
     { name: "blogContent", label: "Blog Content", type: "textarea", required: true },
+    {
+      name: "richContent",
+      label: "Rich Blog Content",
+      type: "richText",
+      admin: {
+        description:
+          "Optional structured article content. Use H2 for major sections and H3 for subsections; the Blog Title is the page H1.",
+      },
+      editor: lexicalEditor({
+        features: () => [
+          ParagraphFeature(),
+          HeadingFeature({
+            enabledHeadingSizes: ["h2", "h3"],
+          }),
+          BoldFeature(),
+          ItalicFeature(),
+          OrderedListFeature(),
+          UnorderedListFeature(),
+          LinkFeature({
+            enabledCollections: [],
+          }),
+          FixedToolbarFeature(),
+          InlineToolbarFeature(),
+        ],
+      }),
+    },
     { name: "featuredImage", label: "Featured Image", type: "upload", relationTo: "media", required: true },
     { name: "status", label: "Status", type: "select", required: true, defaultValue: "draft", options: [{ label: "Draft", value: "draft" }, { label: "Published", value: "published" }] },
     { name: "publishedAt", type: "date", admin: { date: { pickerAppearance: "dayAndTime" } } },

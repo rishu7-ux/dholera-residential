@@ -1,7 +1,33 @@
 import { getPayload } from "payload";
+import { convertLexicalToHTML } from "@payloadcms/richtext-lexical/html";
+import type { SerializedEditorState } from "@payloadcms/richtext-lexical/lexical";
+
 import config from "../../../payload.config";
 
 type Media = { url?: string | null; alt?: string | null };
+
+function toRichContentHtml(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+
+  try {
+    const html = convertLexicalToHTML({
+      data: value as SerializedEditorState,
+    });
+    if (!html) return null;
+
+    // An untouched editor still serialises to an empty wrapper element.
+    // Treat markup with no visible content as absent so the Dholera Estates
+    // frontend falls back to the existing plain-text `content` field.
+    const hasVisibleContent =
+      html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0 ||
+      /<(img|hr|iframe|video)\b/i.test(html);
+
+    return hasVisibleContent ? html : null;
+  } catch (error) {
+    console.error("Dholera Estates rich content could not be serialised", error);
+    return null;
+  }
+}
 
 export async function GET(request: Request) {
   const slug = new URL(request.url).searchParams.get("slug")?.trim();
@@ -19,6 +45,7 @@ export async function GET(request: Request) {
         blogTitle?: string | null;
         shortDescription?: string | null;
         blogContent?: string | null;
+        richContent?: unknown;
         title?: string | null;
         excerpt?: string | null;
         content?: string | null;
@@ -30,6 +57,7 @@ export async function GET(request: Request) {
       return { id: record.id, title, slug: record.slug,
         excerpt: record.shortDescription || record.excerpt,
         content: record.blogContent || record.content,
+        richContentHtml: toRichContentHtml(record.richContent),
         publishedAt: record.publishedAt || record.createdAt,
         imageUrl: media?.url || null, imageAlt: media?.alt || title };
     });
