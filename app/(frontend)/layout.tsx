@@ -17,9 +17,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://dholeraresidentialplot.com"),
-  title: "Dholera Residential Plots | with premium mixed use land | tp-4",
+  title: "Residential And SCO Plots In Dholera | TP4B2 Bhangadh | Omana Projects",
   description:
-    "Explore Mixed use & SCO plots in Dholera Smart City at TP4B2, Bhangadh — near Tata Semiconductor plant & Metro Rail corridor",
+    "Explore Residential, SCO, commercial Plots in Dholera Smart City at TP4B2, Bhangadh — near Tata Semiconductor plant And Metro. Talk to Omana Projects",
   verification: {
     google: "cKLtmMkJ9c0y_sqsScNCzUajpEsvz5v9VcPlTxd9Xc4",
   },
@@ -43,7 +43,7 @@ export default function RootLayout({
         {/* Google tag (gtag.js) */}
         <Script
           async
-          src="https://www.googletagmanager.com/gtag/js?id=G-553023291"
+          src="https://www.googletagmanager.com/gtag/js?id=G-LF465NBQ68"
           strategy="afterInteractive"
         />
         <Script id="google-analytics" strategy="afterInteractive">
@@ -51,7 +51,7 @@ export default function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-553023291');
+            gtag('config', 'G-LF465NBQ68');
           `}
         </Script>
 
