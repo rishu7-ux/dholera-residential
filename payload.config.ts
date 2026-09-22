@@ -23,6 +23,8 @@ import { Estate2Blogs } from "./collections/Estate2Blogs.ts";
 import { DholeraEstatesBlogs } from "./collections/DholeraEstatesBlogs.ts";
 import { DholeraEstatesContactMessages, DholeraEstatesEnquiries } from "./collections/DholeraEstatesLeads.ts";
 import { IndustrialBlogs, IndustrialContactMessages, IndustrialEnquiries } from "./collections/IndustrialCMS.ts";
+import { Estate1ContactMessages, Estate1Enquiries } from "./collections/Estate1Leads.ts";
+import { Estate1Blogs } from "./collections/Estate1Blogs.ts";
 
 /* =========================================================
    USERS COLLECTION
@@ -632,6 +634,9 @@ export default buildConfig({
     Users,
     Enquiries,
     ContactMessages,
+    Estate1Enquiries,
+    Estate1ContactMessages,
+    Estate1Blogs,
     Estate2Enquiries,
     Estate2ContactMessages,
     Estate2Blogs,
