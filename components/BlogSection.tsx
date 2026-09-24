@@ -282,6 +282,7 @@ export default async function BlogSection() {
                         src={imageUrl}
                         alt={imageAlt}
                         fill
+                        unoptimized
                         sizes="
                           (max-width: 640px) 275px,
                           (max-width: 1024px) 310px,

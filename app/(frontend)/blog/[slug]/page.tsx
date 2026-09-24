@@ -196,6 +196,7 @@ export default async function BlogDetailPage({
                   src={imageUrl}
                   alt={imageAlt}
                   fill
+                  unoptimized
                   priority
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1000px"
                   className="object-contain object-center"

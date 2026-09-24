@@ -441,6 +441,7 @@ export default async function BlogPage() {
                           src={imageUrl}
                           alt={imageAlt}
                           fill
+                          unoptimized
                           sizes="
                             (max-width: 640px) 400px,
                             (max-width: 1024px) 50vw,
