@@ -15,6 +15,7 @@ type Estate1BlogRecord = {
   featuredImage: string | Media;
   publishedAt?: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 function toRichContentHtml(value: unknown): string | null {
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
       return {
         id: blog.id, title: blog.title, slug: blog.slug, excerpt: blog.excerpt, content: blog.content,
         richContentHtml: toRichContentHtml(blog.richContent),
-        publishedAt: blog.publishedAt || blog.createdAt, imageUrl: media?.url || null, imageAlt: media?.alt || blog.title,
+        publishedAt: blog.publishedAt || blog.createdAt, updatedAt: blog.updatedAt, imageUrl: media?.url || null, imageAlt: media?.alt || blog.title,
       };
     });
     return Response.json({ success: true, blogs }, { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } });
