@@ -25,6 +25,12 @@ import { DholeraEstatesContactMessages, DholeraEstatesEnquiries } from "./collec
 import { IndustrialBlogs, IndustrialContactMessages, IndustrialEnquiries } from "./collections/IndustrialCMS.ts";
 import { Estate1ContactMessages, Estate1Enquiries } from "./collections/Estate1Leads.ts";
 import { Estate1Blogs } from "./collections/Estate1Blogs.ts";
+import { OmanaBlogs } from "./collections/OmanaBlogs.ts";
+import {
+  OmanaContactMessages,
+  OmanaEnquiries,
+  OmanaGoogleAdsEnquiries,
+} from "./collections/OmanaLeads.ts";
 
 /* =========================================================
    USERS COLLECTION
@@ -646,6 +652,10 @@ export default buildConfig({
     IndustrialEnquiries,
     IndustrialContactMessages,
     IndustrialBlogs,
+    OmanaEnquiries,
+    OmanaContactMessages,
+    OmanaGoogleAdsEnquiries,
+    OmanaBlogs,
     Media,
     Blogs,
   ],

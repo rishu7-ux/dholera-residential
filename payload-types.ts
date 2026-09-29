@@ -70,6 +70,9 @@ export interface Config {
     users: User;
     enquiries: Enquiry;
     'contact-messages': ContactMessage;
+    'estate1-enquiries': Estate1Enquiry;
+    'estate1-contact-messages': Estate1ContactMessage;
+    'estate1-blogs': Estate1Blog;
     'estate2-enquiries': Estate2Enquiry;
     'estate2-contact-messages': Estate2ContactMessage;
     'estate2-blogs': Estate2Blog;
@@ -79,6 +82,10 @@ export interface Config {
     'industrial-enquiries': IndustrialEnquiry;
     'industrial-contact-messages': IndustrialContactMessage;
     'industrial-blogs': IndustrialBlog;
+    'omana-enquiries': OmanaEnquiry;
+    'omana-contact-messages': OmanaContactMessage;
+    'omana-google-ads-enquiries': OmanaGoogleAdsEnquiry;
+    'omana-blogs': OmanaBlog;
     media: Media;
     blogs: Blog;
     'payload-kv': PayloadKv;
@@ -91,6 +98,9 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     enquiries: EnquiriesSelect<false> | EnquiriesSelect<true>;
     'contact-messages': ContactMessagesSelect<false> | ContactMessagesSelect<true>;
+    'estate1-enquiries': Estate1EnquiriesSelect<false> | Estate1EnquiriesSelect<true>;
+    'estate1-contact-messages': Estate1ContactMessagesSelect<false> | Estate1ContactMessagesSelect<true>;
+    'estate1-blogs': Estate1BlogsSelect<false> | Estate1BlogsSelect<true>;
     'estate2-enquiries': Estate2EnquiriesSelect<false> | Estate2EnquiriesSelect<true>;
     'estate2-contact-messages': Estate2ContactMessagesSelect<false> | Estate2ContactMessagesSelect<true>;
     'estate2-blogs': Estate2BlogsSelect<false> | Estate2BlogsSelect<true>;
@@ -100,6 +110,10 @@ export interface Config {
     'industrial-enquiries': IndustrialEnquiriesSelect<false> | IndustrialEnquiriesSelect<true>;
     'industrial-contact-messages': IndustrialContactMessagesSelect<false> | IndustrialContactMessagesSelect<true>;
     'industrial-blogs': IndustrialBlogsSelect<false> | IndustrialBlogsSelect<true>;
+    'omana-enquiries': OmanaEnquiriesSelect<false> | OmanaEnquiriesSelect<true>;
+    'omana-contact-messages': OmanaContactMessagesSelect<false> | OmanaContactMessagesSelect<true>;
+    'omana-google-ads-enquiries': OmanaGoogleAdsEnquiriesSelect<false> | OmanaGoogleAdsEnquiriesSelect<true>;
+    'omana-blogs': OmanaBlogsSelect<false> | OmanaBlogsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     blogs: BlogsSelect<false> | BlogsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -203,6 +217,94 @@ export interface ContactMessage {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "estate1-enquiries".
+ */
+export interface Estate1Enquiry {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  message?: string | null;
+  source: 'estate1-popup-form' | 'estate1-side-enquiry-form';
+  status?: ('new' | 'contacted' | 'follow-up' | 'qualified' | 'closed') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "estate1-contact-messages".
+ */
+export interface Estate1ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  budget: 'below-20-lakhs' | '20-50-lakhs' | '50-lakhs-1-crore' | 'above-1-crore';
+  comments?: string | null;
+  consent: boolean;
+  source: string;
+  status?: ('new' | 'contacted' | 'follow-up' | 'qualified' | 'closed') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "estate1-blogs".
+ */
+export interface Estate1Blog {
+  id: string;
+  title: string;
+  /**
+   * URL slug, for example: investing-in-dholera
+   */
+  slug: string;
+  excerpt: string;
+  content: string;
+  /**
+   * Optional structured article content. Use H2 for major sections and H3 for subsections; the Blog Title is the page H1.
+   */
+  richContent?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  featuredImage: string | Media;
+  status: 'draft' | 'published';
+  publishedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: string;
+  alt: string;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "estate2-enquiries".
  */
 export interface Estate2Enquiry {
@@ -271,25 +373,6 @@ export interface Estate2Blog {
   publishedAt?: string | null;
   updatedAt: string;
   createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
- */
-export interface Media {
-  id: string;
-  alt: string;
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -417,6 +500,106 @@ export interface IndustrialBlog {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "omana-enquiries".
+ */
+export interface OmanaEnquiry {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  selectedProject?: string | null;
+  selectedProjectSlug?: string | null;
+  page: string;
+  source: 'omana-global-drawer' | 'omana-project-page' | 'omana-website';
+  consent: boolean;
+  status?: ('new' | 'contacted' | 'follow-up' | 'qualified' | 'closed') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "omana-contact-messages".
+ */
+export interface OmanaContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  selectedProject?: string | null;
+  selectedProjectSlug?: string | null;
+  page: string;
+  source: string;
+  consent: boolean;
+  status?: ('new' | 'contacted' | 'follow-up' | 'qualified' | 'closed') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "omana-google-ads-enquiries".
+ */
+export interface OmanaGoogleAdsEnquiry {
+  id: string;
+  name: string;
+  phone: string;
+  selectedProject?: string | null;
+  selectedProjectSlug?: string | null;
+  page: string;
+  source: string;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+  utmTerm?: string | null;
+  utmContent?: string | null;
+  gclid?: string | null;
+  gbraid?: string | null;
+  wbraid?: string | null;
+  referrer?: string | null;
+  consent: boolean;
+  status?: ('new' | 'contacted' | 'follow-up' | 'qualified' | 'closed') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "omana-blogs".
+ */
+export interface OmanaBlog {
+  id: string;
+  title: string;
+  /**
+   * URL slug, for example: investing-in-dholera
+   */
+  slug: string;
+  category: string;
+  excerpt: string;
+  content: string;
+  /**
+   * Optional structured article content. Use H2 for major sections and H3 for subsections; the Blog Title is the page H1.
+   */
+  richContent?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  featuredImage: string | Media;
+  status: 'draft' | 'published';
+  publishedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "blogs".
  */
 export interface Blog {
@@ -489,6 +672,18 @@ export interface PayloadLockedDocument {
         value: string | ContactMessage;
       } | null)
     | ({
+        relationTo: 'estate1-enquiries';
+        value: string | Estate1Enquiry;
+      } | null)
+    | ({
+        relationTo: 'estate1-contact-messages';
+        value: string | Estate1ContactMessage;
+      } | null)
+    | ({
+        relationTo: 'estate1-blogs';
+        value: string | Estate1Blog;
+      } | null)
+    | ({
         relationTo: 'estate2-enquiries';
         value: string | Estate2Enquiry;
       } | null)
@@ -523,6 +718,22 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'industrial-blogs';
         value: string | IndustrialBlog;
+      } | null)
+    | ({
+        relationTo: 'omana-enquiries';
+        value: string | OmanaEnquiry;
+      } | null)
+    | ({
+        relationTo: 'omana-contact-messages';
+        value: string | OmanaContactMessage;
+      } | null)
+    | ({
+        relationTo: 'omana-google-ads-enquiries';
+        value: string | OmanaGoogleAdsEnquiry;
+      } | null)
+    | ({
+        relationTo: 'omana-blogs';
+        value: string | OmanaBlog;
       } | null)
     | ({
         relationTo: 'media';
@@ -625,6 +836,52 @@ export interface ContactMessagesSelect<T extends boolean = true> {
   consent?: T;
   source?: T;
   status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "estate1-enquiries_select".
+ */
+export interface Estate1EnquiriesSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  phone?: T;
+  message?: T;
+  source?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "estate1-contact-messages_select".
+ */
+export interface Estate1ContactMessagesSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  phone?: T;
+  budget?: T;
+  comments?: T;
+  consent?: T;
+  source?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "estate1-blogs_select".
+ */
+export interface Estate1BlogsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  excerpt?: T;
+  content?: T;
+  richContent?: T;
+  featuredImage?: T;
+  status?: T;
+  publishedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -765,6 +1022,82 @@ export interface IndustrialBlogsSelect<T extends boolean = true> {
   slug?: T;
   excerpt?: T;
   content?: T;
+  featuredImage?: T;
+  status?: T;
+  publishedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "omana-enquiries_select".
+ */
+export interface OmanaEnquiriesSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  phone?: T;
+  selectedProject?: T;
+  selectedProjectSlug?: T;
+  page?: T;
+  source?: T;
+  consent?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "omana-contact-messages_select".
+ */
+export interface OmanaContactMessagesSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  phone?: T;
+  selectedProject?: T;
+  selectedProjectSlug?: T;
+  page?: T;
+  source?: T;
+  consent?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "omana-google-ads-enquiries_select".
+ */
+export interface OmanaGoogleAdsEnquiriesSelect<T extends boolean = true> {
+  name?: T;
+  phone?: T;
+  selectedProject?: T;
+  selectedProjectSlug?: T;
+  page?: T;
+  source?: T;
+  utmSource?: T;
+  utmMedium?: T;
+  utmCampaign?: T;
+  utmTerm?: T;
+  utmContent?: T;
+  gclid?: T;
+  gbraid?: T;
+  wbraid?: T;
+  referrer?: T;
+  consent?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "omana-blogs_select".
+ */
+export interface OmanaBlogsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  category?: T;
+  excerpt?: T;
+  content?: T;
+  richContent?: T;
   featuredImage?: T;
   status?: T;
   publishedAt?: T;
