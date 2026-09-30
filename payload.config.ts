@@ -571,11 +571,21 @@ export default buildConfig({
 
     components: {
       beforeNavLinks: [
+        "/components/admin/OmanaNavLink.tsx#default",
         "/components/admin/Estate2NavLink.tsx#default",
         "/components/admin/DholeraEstatesNavLink.tsx#default",
         "/components/admin/IndustrialNavLink.tsx#default",
       ],
       views: {
+        omanaDashboard: {
+          Component:
+            "/components/admin/OmanaDashboard.tsx#default",
+          path: "/omana-dashboard",
+          exact: true,
+          meta: {
+            title: "Omana Projects Dashboard",
+          },
+        },
         estate2Dashboard: {
           Component:
             "/components/admin/Estate2Dashboard.tsx#default",

@@ -21,12 +21,18 @@ const statusField: Field = {
   ],
 };
 
+const optionalMessageField: Field = {
+  name: "message",
+  label: "Message",
+  type: "textarea",
+};
+
 export const OmanaEnquiries: CollectionConfig = {
   slug: "omana-enquiries",
   labels: { singular: "Omana Enquiry", plural: "Omana Enquiries" },
   admin: {
     useAsTitle: "name",
-    group: "Omana Leads",
+    group: "Omana Projects",
     defaultColumns: [
       "name",
       "email",
@@ -45,6 +51,7 @@ export const OmanaEnquiries: CollectionConfig = {
     { name: "phone", type: "text", required: true },
     { name: "selectedProject", label: "Selected Project", type: "text" },
     { name: "selectedProjectSlug", label: "Selected Project Slug", type: "text" },
+    optionalMessageField,
     { name: "page", label: "Source Page", type: "text", required: true },
     {
       name: "source",
@@ -65,12 +72,12 @@ export const OmanaEnquiries: CollectionConfig = {
 export const OmanaContactMessages: CollectionConfig = {
   slug: "omana-contact-messages",
   labels: {
-    singular: "Omana Contact Message",
-    plural: "Omana Contact Messages",
+    singular: "Contact Message",
+    plural: "Contact Messages",
   },
   admin: {
     useAsTitle: "name",
-    group: "Omana Leads",
+    group: "Omana Projects",
     defaultColumns: [
       "name",
       "email",
@@ -87,6 +94,7 @@ export const OmanaContactMessages: CollectionConfig = {
     { name: "phone", type: "text", required: true },
     { name: "selectedProject", label: "Selected Project", type: "text" },
     { name: "selectedProjectSlug", label: "Selected Project Slug", type: "text" },
+    optionalMessageField,
     { name: "page", label: "Source Page", type: "text", required: true, defaultValue: "/contact" },
     { name: "source", type: "text", required: true, defaultValue: "omana-contact-page" },
     { name: "consent", label: "Contact Consent", type: "checkbox", required: true },
@@ -103,9 +111,10 @@ export const OmanaGoogleAdsEnquiries: CollectionConfig = {
   },
   admin: {
     useAsTitle: "name",
-    group: "Omana Leads",
+    group: "Omana Projects",
     defaultColumns: [
       "name",
+      "email",
       "phone",
       "selectedProject",
       "utmCampaign",
@@ -117,9 +126,11 @@ export const OmanaGoogleAdsEnquiries: CollectionConfig = {
   access: privateAccess,
   fields: [
     { name: "name", type: "text", required: true },
+    { name: "email", type: "email" },
     { name: "phone", type: "text", required: true },
     { name: "selectedProject", label: "Selected Project", type: "text" },
     { name: "selectedProjectSlug", label: "Selected Project Slug", type: "text" },
+    optionalMessageField,
     { name: "page", label: "Source Page", type: "text", required: true, defaultValue: "/dholeraplots" },
     { name: "source", type: "text", required: true, defaultValue: "google-ads-dholeraplots" },
     { name: "utmSource", label: "UTM Source", type: "text" },

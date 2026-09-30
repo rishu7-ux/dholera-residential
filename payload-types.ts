@@ -509,6 +509,7 @@ export interface OmanaEnquiry {
   phone: string;
   selectedProject?: string | null;
   selectedProjectSlug?: string | null;
+  message?: string | null;
   page: string;
   source: 'omana-global-drawer' | 'omana-project-page' | 'omana-website';
   consent: boolean;
@@ -527,6 +528,7 @@ export interface OmanaContactMessage {
   phone: string;
   selectedProject?: string | null;
   selectedProjectSlug?: string | null;
+  message?: string | null;
   page: string;
   source: string;
   consent: boolean;
@@ -541,9 +543,11 @@ export interface OmanaContactMessage {
 export interface OmanaGoogleAdsEnquiry {
   id: string;
   name: string;
+  email?: string | null;
   phone: string;
   selectedProject?: string | null;
   selectedProjectSlug?: string | null;
+  message?: string | null;
   page: string;
   source: string;
   utmSource?: string | null;
@@ -1038,6 +1042,7 @@ export interface OmanaEnquiriesSelect<T extends boolean = true> {
   phone?: T;
   selectedProject?: T;
   selectedProjectSlug?: T;
+  message?: T;
   page?: T;
   source?: T;
   consent?: T;
@@ -1055,6 +1060,7 @@ export interface OmanaContactMessagesSelect<T extends boolean = true> {
   phone?: T;
   selectedProject?: T;
   selectedProjectSlug?: T;
+  message?: T;
   page?: T;
   source?: T;
   consent?: T;
@@ -1068,9 +1074,11 @@ export interface OmanaContactMessagesSelect<T extends boolean = true> {
  */
 export interface OmanaGoogleAdsEnquiriesSelect<T extends boolean = true> {
   name?: T;
+  email?: T;
   phone?: T;
   selectedProject?: T;
   selectedProjectSlug?: T;
+  message?: T;
   page?: T;
   source?: T;
   utmSource?: T;

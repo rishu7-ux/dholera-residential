@@ -17,7 +17,7 @@ export const OmanaBlogs: CollectionConfig = {
   labels: { singular: "Omana Blog", plural: "Omana Blogs" },
   admin: {
     useAsTitle: "title",
-    group: "Omana Content",
+    group: "Omana Projects",
     defaultColumns: ["title", "category", "slug", "status", "publishedAt", "createdAt"],
   },
   access: {
