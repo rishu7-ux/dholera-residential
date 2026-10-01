@@ -571,12 +571,22 @@ export default buildConfig({
 
     components: {
       beforeNavLinks: [
+        "/components/admin/ResidentialNavLink.tsx#default",
         "/components/admin/OmanaNavLink.tsx#default",
         "/components/admin/Estate2NavLink.tsx#default",
         "/components/admin/DholeraEstatesNavLink.tsx#default",
         "/components/admin/IndustrialNavLink.tsx#default",
       ],
       views: {
+        residentialDashboard: {
+          Component:
+            "/components/admin/ResidentialDashboard.tsx#default",
+          path: "/residential-dashboard",
+          exact: true,
+          meta: {
+            title: "Dholera Residential Dashboard",
+          },
+        },
         omanaDashboard: {
           Component:
             "/components/admin/OmanaDashboard.tsx#default",
