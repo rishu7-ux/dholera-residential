@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { connection } from "next/server";
+import { unstable_cache } from "next/cache";
 
 import {
   FaUserAlt,
@@ -32,38 +32,39 @@ type Blog = {
   featuredImage?: Media | string | null;
 };
 
+const getPublishedBlogs = unstable_cache(
+  async () => {
+    const payload = await getPayload({
+      config,
+    });
+
+    const result = await payload.find({
+      collection: "blogs",
+      where: {
+        status: {
+          equals: "published",
+        },
+      },
+      sort: "-publishedAt",
+      limit: 10,
+      depth: 1,
+    });
+
+    return result.docs as Blog[];
+  },
+  ["homepage-published-blogs"],
+  {
+    revalidate: 300,
+    tags: ["blogs"],
+  },
+);
+
 /* =========================================================
    BLOG SECTION
 ========================================================= */
 
 export default async function BlogSection() {
-  await connection();
-
-  const payload = await getPayload({
-    config,
-  });
-
-  /* =========================================================
-     GET PUBLISHED BLOGS
-  ========================================================= */
-
-  const result = await payload.find({
-    collection: "blogs",
-
-    where: {
-      status: {
-        equals: "published",
-      },
-    },
-
-    sort: "-publishedAt",
-
-    limit: 10,
-
-    depth: 1,
-  });
-
-  const blogs = result.docs as Blog[];
+  const blogs = await getPublishedBlogs();
 
   /* =========================================================
      DATE FORMAT
@@ -282,7 +283,6 @@ export default async function BlogSection() {
                         src={imageUrl}
                         alt={imageAlt}
                         fill
-                        unoptimized
                         sizes="
                           (max-width: 640px) 275px,
                           (max-width: 1024px) 310px,

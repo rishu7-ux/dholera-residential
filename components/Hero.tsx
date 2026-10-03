@@ -12,19 +12,7 @@ export default function Hero() {
           IMAGE AREA
       ===================================================== */}
 
-      <motion.div
-        initial={{
-          opacity: 0,
-          scale: 1.02,
-        }}
-        animate={{
-          opacity: 1,
-          scale: 1,
-        }}
-        transition={{
-          duration: 1.2,
-          ease: [0.22, 1, 0.36, 1],
-        }}
+      <div
         className="
           relative
           w-full
@@ -38,24 +26,14 @@ export default function Hero() {
         ===================================================== */}
 
         <div className="relative block w-full overflow-hidden sm:hidden">
-          <motion.div
-            animate={{
-              scale: [1, 1.04, 1],
-              x: [0, -4, 0],
-            }}
-            transition={{
-              duration: 12,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-            className="w-full"
-          >
+          <div className="w-full">
             <Image
               src="/images/kbvmc.jpg.jpeg"
               alt="Dholera Residential Plots"
               width={1920}
               height={1080}
-              priority
+              fetchPriority="high"
+              loading="eager"
               sizes="100vw"
               className="
                 block
@@ -63,14 +41,14 @@ export default function Hero() {
                 w-full
               "
             />
-          </motion.div>
+          </div>
         </div>
 
         {/* =====================================================
-            DESKTOP ANIMATED IMAGE
+            DESKTOP IMAGE
         ===================================================== */}
 
-        <motion.div
+        <div
           className="
             absolute
             inset-0
@@ -78,29 +56,20 @@ export default function Hero() {
 
             sm:block
           "
-          animate={{
-            scale: [1.02, 1.08, 1.04, 1.02],
-            x: [0, -10, 8, 0],
-            y: [0, -5, 4, 0],
-          }}
-          transition={{
-            duration: 18,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
         >
           <Image
             src="/images/kbvmc.jpg.jpeg"
             alt="Dholera Residential Plots"
             fill
-            priority
+            fetchPriority="high"
+            loading="eager"
             sizes="100vw"
             className="
               object-cover
               object-center
             "
           />
-        </motion.div>
+        </div>
 
         {/* =====================================================
             SOFT DARK OVERLAY
@@ -470,7 +439,7 @@ export default function Hero() {
             shadow-[0_0_18px_rgba(255,122,0,0.55)]
           "
         />
-      </motion.div>
+      </div>
     </section>
   );
 }

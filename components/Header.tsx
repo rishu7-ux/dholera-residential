@@ -167,7 +167,7 @@ export default function Header() {
                 src="/images/logo2.JPG.jpeg"
                 alt="Dholera Logo"
                 fill
-                priority
+                loading="eager"
                 sizes="
                   (max-width: 640px) 145px,
                   (max-width: 768px) 165px,
