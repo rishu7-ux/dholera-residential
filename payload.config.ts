@@ -26,10 +26,12 @@ import { IndustrialBlogs, IndustrialContactMessages, IndustrialEnquiries } from 
 import { Estate1ContactMessages, Estate1Enquiries } from "./collections/Estate1Leads.ts";
 import { Estate1Blogs } from "./collections/Estate1Blogs.ts";
 import { OmanaBlogs } from "./collections/OmanaBlogs.ts";
+import { AIKnowledge } from "./collections/AIKnowledge.ts";
 import {
   OmanaContactMessages,
   OmanaEnquiries,
   OmanaGoogleAdsEnquiries,
+  OmanaSalespeople,
 } from "./collections/OmanaLeads.ts";
 
 /* =========================================================
@@ -675,7 +677,9 @@ export default buildConfig({
     OmanaEnquiries,
     OmanaContactMessages,
     OmanaGoogleAdsEnquiries,
+    OmanaSalespeople,
     OmanaBlogs,
+    AIKnowledge,
     Media,
     Blogs,
   ],

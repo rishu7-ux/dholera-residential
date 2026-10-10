@@ -7,7 +7,11 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit --incremental false",
+    "test:rag": "tsx --test tests/rag/*.test.ts",
+    "test:qualification": "tsx --test tests/leads/qualification.test.ts",
+    "test:assignment": "tsx --test tests/leads/assignment.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
@@ -15,12 +19,15 @@
     "@payloadcms/next": "^3.88.0",
     "@payloadcms/richtext-lexical": "3.88.0",
     "@payloadcms/storage-vercel-blob": "^3.88.0",
+    "@qdrant/js-client-rest": "^1.19.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "axios": "^1.19.0",
+    "cheerio": "^1.2.0",
     "framer-motion": "^12.43.0",
     "mongoose": "^9.9.2",
     "next": "16.2.12",
+    "openai": "^7.28.0",
     "payload": "^3.88.0",
     "react": "19.2.4",
     "react-countup": "^6.5.3",
@@ -39,6 +46,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

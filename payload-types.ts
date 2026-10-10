@@ -85,7 +85,9 @@ export interface Config {
     'omana-enquiries': OmanaEnquiry;
     'omana-contact-messages': OmanaContactMessage;
     'omana-google-ads-enquiries': OmanaGoogleAdsEnquiry;
+    'omana-salespeople': OmanaSalesperson;
     'omana-blogs': OmanaBlog;
+    'ai-knowledge': AiKnowledge;
     media: Media;
     blogs: Blog;
     'payload-kv': PayloadKv;
@@ -113,7 +115,9 @@ export interface Config {
     'omana-enquiries': OmanaEnquiriesSelect<false> | OmanaEnquiriesSelect<true>;
     'omana-contact-messages': OmanaContactMessagesSelect<false> | OmanaContactMessagesSelect<true>;
     'omana-google-ads-enquiries': OmanaGoogleAdsEnquiriesSelect<false> | OmanaGoogleAdsEnquiriesSelect<true>;
+    'omana-salespeople': OmanaSalespeopleSelect<false> | OmanaSalespeopleSelect<true>;
     'omana-blogs': OmanaBlogsSelect<false> | OmanaBlogsSelect<true>;
+    'ai-knowledge': AiKnowledgeSelect<false> | AiKnowledgeSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     blogs: BlogsSelect<false> | BlogsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -505,15 +509,63 @@ export interface IndustrialBlog {
 export interface OmanaEnquiry {
   id: string;
   name: string;
-  email: string;
+  email?: string | null;
   phone: string;
   selectedProject?: string | null;
   selectedProjectSlug?: string | null;
+  requirement?: string | null;
+  plotSize?: string | null;
+  budget?: string | null;
+  purchaseTimeline?: string | null;
+  initialIntent?: string | null;
   message?: string | null;
   page: string;
-  source: 'omana-global-drawer' | 'omana-project-page' | 'omana-website';
+  source: 'omana-global-drawer' | 'omana-project-page' | 'omana-website' | 'ai-chatbot';
+  idempotencyKey?: string | null;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+  utmTerm?: string | null;
+  utmContent?: string | null;
+  gclid?: string | null;
+  gbraid?: string | null;
+  wbraid?: string | null;
+  referrer?: string | null;
   consent: boolean;
+  qualification?: ('hot' | 'warm' | 'cold' | 'needs-review') | null;
+  qualificationReasons?:
+    | {
+        reason: string;
+        id?: string | null;
+      }[]
+    | null;
+  qualificationVersion?: string | null;
+  qualifiedAt?: string | null;
+  qualificationMode?: ('automatic' | 'manual') | null;
+  assignedSalesperson?: (string | null) | OmanaSalesperson;
+  assignedAt?: string | null;
+  assignmentSequence?: number | null;
+  assignmentMode?: ('automatic' | 'manual') | null;
   status?: ('new' | 'contacted' | 'follow-up' | 'qualified' | 'closed') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Active salespeople receive new ASK OMANA chatbot leads in rotation order.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "omana-salespeople".
+ */
+export interface OmanaSalesperson {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  active: boolean;
+  /**
+   * Lower numbers are considered first. Duplicate values are resolved deterministically.
+   */
+  rotationOrder: number;
   updatedAt: string;
   createdAt: string;
 }
@@ -599,6 +651,30 @@ export interface OmanaBlog {
   featuredImage: string | Media;
   status: 'draft' | 'published';
   publishedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Curated, verified source material for the central RAG service. Draft entries are never indexed.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ai-knowledge".
+ */
+export interface AiKnowledge {
+  id: string;
+  title: string;
+  site: 'omana';
+  category: string;
+  /**
+   * Optional canonical question this content answers.
+   */
+  question?: string | null;
+  content: string;
+  published: boolean;
+  /**
+   * Optional authoritative public URL supporting this entry.
+   */
+  sourceUrl?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -736,8 +812,16 @@ export interface PayloadLockedDocument {
         value: string | OmanaGoogleAdsEnquiry;
       } | null)
     | ({
+        relationTo: 'omana-salespeople';
+        value: string | OmanaSalesperson;
+      } | null)
+    | ({
         relationTo: 'omana-blogs';
         value: string | OmanaBlog;
+      } | null)
+    | ({
+        relationTo: 'ai-knowledge';
+        value: string | AiKnowledge;
       } | null)
     | ({
         relationTo: 'media';
@@ -1042,10 +1126,39 @@ export interface OmanaEnquiriesSelect<T extends boolean = true> {
   phone?: T;
   selectedProject?: T;
   selectedProjectSlug?: T;
+  requirement?: T;
+  plotSize?: T;
+  budget?: T;
+  purchaseTimeline?: T;
+  initialIntent?: T;
   message?: T;
   page?: T;
   source?: T;
+  idempotencyKey?: T;
+  utmSource?: T;
+  utmMedium?: T;
+  utmCampaign?: T;
+  utmTerm?: T;
+  utmContent?: T;
+  gclid?: T;
+  gbraid?: T;
+  wbraid?: T;
+  referrer?: T;
   consent?: T;
+  qualification?: T;
+  qualificationReasons?:
+    | T
+    | {
+        reason?: T;
+        id?: T;
+      };
+  qualificationVersion?: T;
+  qualifiedAt?: T;
+  qualificationMode?: T;
+  assignedSalesperson?: T;
+  assignedAt?: T;
+  assignmentSequence?: T;
+  assignmentMode?: T;
   status?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1097,6 +1210,19 @@ export interface OmanaGoogleAdsEnquiriesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "omana-salespeople_select".
+ */
+export interface OmanaSalespeopleSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  phone?: T;
+  active?: T;
+  rotationOrder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "omana-blogs_select".
  */
 export interface OmanaBlogsSelect<T extends boolean = true> {
@@ -1109,6 +1235,21 @@ export interface OmanaBlogsSelect<T extends boolean = true> {
   featuredImage?: T;
   status?: T;
   publishedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ai-knowledge_select".
+ */
+export interface AiKnowledgeSelect<T extends boolean = true> {
+  title?: T;
+  site?: T;
+  category?: T;
+  question?: T;
+  content?: T;
+  published?: T;
+  sourceUrl?: T;
   updatedAt?: T;
   createdAt?: T;
 }

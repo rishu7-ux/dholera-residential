@@ -12,6 +12,33 @@ import {
   lexicalEditor,
 } from "@payloadcms/richtext-lexical";
 
+async function revalidateOmanaBlogs(slug?: string, previousSlug?: string) {
+  const frontendUrl = process.env.OMANA_FRONTEND_URL?.trim();
+  const secret = process.env.OMANA_REVALIDATE_SECRET?.trim();
+  if (!frontendUrl || !secret) return;
+
+  try {
+    const endpoint = new URL("/api/revalidate/omana-blogs", frontendUrl);
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ slug, previousSlug }),
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!response.ok) {
+      console.error("Omana frontend cache revalidation failed", response.status);
+    }
+  } catch (error) {
+    console.error(
+      "Omana frontend cache revalidation failed",
+      error instanceof Error ? error.name : "UnknownError",
+    );
+  }
+}
+
 export const OmanaBlogs: CollectionConfig = {
   slug: "omana-blogs",
   labels: { singular: "Omana Blog", plural: "Omana Blogs" },
@@ -32,6 +59,20 @@ export const OmanaBlogs: CollectionConfig = {
     create: ({ req }) => Boolean(req.user),
     update: ({ req }) => Boolean(req.user),
     delete: ({ req }) => Boolean(req.user),
+  },
+  hooks: {
+    afterChange: [
+      async ({ doc, previousDoc }) => {
+        await revalidateOmanaBlogs(doc.slug, previousDoc?.slug);
+        return doc;
+      },
+    ],
+    afterDelete: [
+      async ({ doc }) => {
+        await revalidateOmanaBlogs(doc.slug);
+        return doc;
+      },
+    ],
   },
   fields: [
     { name: "title", label: "Blog Title", type: "text", required: true },
