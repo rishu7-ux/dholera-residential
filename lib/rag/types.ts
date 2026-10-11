@@ -30,6 +30,11 @@ export type RetrievedChunk = KnowledgePayload & {
   score: number;
 };
 
+export type ChatTurn = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 export type ChatAnswer = {
   answer: string;
   sources: Array<{

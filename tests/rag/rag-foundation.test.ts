@@ -3,6 +3,10 @@ import test from "node:test";
 
 import { chunkKnowledgeSource } from "../../lib/rag/chunk.ts";
 import { cleanHtmlContent } from "../../lib/rag/clean.ts";
+import {
+  buildRetrievalQuery,
+  unverifiedAnswerFor,
+} from "../../lib/rag/conversation.ts";
 import { staleSiteFilter } from "../../lib/rag/filters.ts";
 import {
   answerNumbersAreGrounded,
@@ -12,6 +16,7 @@ import {
   selectGroundingChunks,
 } from "../../lib/rag/grounding-rules.ts";
 import { isIndexingAuthorized } from "../../lib/rag/index-auth.ts";
+import { consumeChatRateLimit } from "../../lib/rag/rate-limit.ts";
 import type { RetrievedChunk } from "../../lib/rag/types.ts";
 import { chatRequestSchema } from "../../lib/rag/validation.ts";
 
@@ -91,6 +96,50 @@ test("invalid sites and empty questions are rejected", () => {
     false,
   );
   assert.equal(chatRequestSchema.safeParse({ site: "omana", question: "   " }).success, false);
+});
+
+test("multi-turn requests accept bounded history and reject oversized context", () => {
+  const valid = chatRequestSchema.safeParse({
+    site: "omana",
+    question: "What about its payment plan?",
+    history: [
+      { role: "user", content: "Tell me about Dholera Estates." },
+      { role: "assistant", content: "It is an Omana project." },
+    ],
+  });
+  assert.equal(valid.success, true);
+
+  const oversized = chatRequestSchema.safeParse({
+    site: "omana",
+    question: "Continue",
+    history: Array.from({ length: 16 }, () => ({ role: "user", content: "x".repeat(600) })),
+  });
+  assert.equal(oversized.success, false);
+});
+
+test("pronoun follow-ups retrieve with recent project context", () => {
+  const query = buildRetrievalQuery("What about its price?", [
+    { role: "user", content: "Tell me about Dholera Estates." },
+    { role: "assistant", content: "Dholera Estates is a plotted development." },
+  ]);
+
+  assert.match(query, /Dholera Estates/);
+  assert.match(query, /What about its price\?/);
+});
+
+test("unsupported answers use the customer's Hindi or Hinglish language", () => {
+  assert.match(unverifiedAnswerFor("इसकी आज की कीमत क्या है?"), /पुष्टि नहीं कर सकता/);
+  assert.match(unverifiedAnswerFor("Iski current price kya hai?"), /verify nahi kar sakta/);
+});
+
+test("chat rate limiting allows normal conversation and blocks abuse", () => {
+  const request = new Request("https://cms.example/api/chat", {
+    headers: { "x-forwarded-for": "203.0.113.77" },
+  });
+  for (let count = 0; count < 20; count += 1) {
+    assert.equal(consumeChatRateLimit(request, 1_000).allowed, true);
+  }
+  assert.equal(consumeChatRateLimit(request, 1_000).allowed, false);
 });
 
 test("indexing authorization rejects absent and incorrect bearer secrets", () => {

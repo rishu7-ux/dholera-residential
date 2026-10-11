@@ -33,15 +33,35 @@ export async function retrieveKnowledge(
   site: SupportedSite,
   qdrant: QdrantClient = getQdrantClient(),
 ): Promise<RetrievedChunk[]> {
-  const vector = await embedQuestion(question);
-  const result = await qdrant.query(QDRANT_COLLECTION_NAME, {
+  let vector: number[];
+  try {
+    vector = await embedQuestion(question);
+  } catch (error) {
+    const classified = new Error("Chat embedding provider failed", { cause: error });
+    classified.name = "RagEmbeddingError";
+    throw classified;
+  }
+  const query = {
     query: vector,
     filter: siteFilter(site),
     limit: RETRIEVAL_LIMIT,
     score_threshold: RETRIEVAL_SCORE_THRESHOLD,
-    with_payload: true,
-    with_vector: false,
-  });
+    with_payload: true as const,
+    with_vector: false as const,
+  };
+  let result;
+  try {
+    result = await qdrant.query(QDRANT_COLLECTION_NAME, query);
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    try {
+      result = await qdrant.query(QDRANT_COLLECTION_NAME, query);
+    } catch (retryError) {
+      const classified = new Error("Chat vector search failed", { cause: retryError });
+      classified.name = "RagVectorSearchError";
+      throw classified;
+    }
+  }
 
   return result.points.flatMap((point) => {
     if (!isKnowledgePayload(point.payload) || point.payload.site !== site) return [];

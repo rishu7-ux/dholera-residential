@@ -9,6 +9,8 @@ export const RESPONSE_MODEL = "gpt-4.1-mini";
 
 export const CHAT_QUESTION_MIN_LENGTH = 2;
 export const CHAT_QUESTION_MAX_LENGTH = 600;
+export const CHAT_HISTORY_MAX_TURNS = 16;
+export const CHAT_HISTORY_MAX_CHARACTERS = 8_000;
 export const RETRIEVAL_LIMIT = 6;
 export const RETRIEVAL_SCORE_THRESHOLD = 0.3;
 export const MAX_CONTEXT_CHARACTERS = 14000;

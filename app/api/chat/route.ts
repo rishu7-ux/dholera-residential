@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
-const MAX_BODY_CHARACTERS = 4096;
+const MAX_BODY_CHARACTERS = 12_288;
 
 export async function POST(request: Request) {
   const rateLimit = consumeChatRateLimit(request);
