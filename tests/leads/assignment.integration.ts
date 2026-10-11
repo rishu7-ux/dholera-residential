@@ -65,8 +65,8 @@ const idempotencyKeys = Array.from({ length: 5 }, () => randomUUID());
 const testIdempotencyKeys = new Set(idempotencyKeys);
 const salespersonEmails = salespersonInputs.map((person) => person.email);
 const syntheticPhone = () => {
-  const digits = randomBytes(6).readUIntBE(0, 6) % 1_000_000_000_000;
-  return `+1${String(digits).padStart(12, "0")}`;
+  const suffix = randomBytes(4).readUInt32BE(0) % 1_000_000_000;
+  return `+916${String(suffix).padStart(9, "0")}`;
 };
 const leadPhones = Array.from({ length: 5 }, syntheticPhone);
 

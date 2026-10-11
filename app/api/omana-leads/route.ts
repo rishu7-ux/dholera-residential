@@ -17,6 +17,31 @@ const flexiblePhone = z.string().trim().min(7).max(22).refine((value) => {
   const digits = value.replace(/\D/g, "");
   return /^\+?[\d\s().-]{7,22}$/.test(value) && digits.length >= 7 && digits.length <= 15;
 });
+const indianMobile = z
+  .string()
+  .trim()
+  .min(10)
+  .max(22)
+  .refine((value) => {
+    const digits = value.replace(/\D/g, "");
+    const nationalNumber =
+      digits.length === 12 && digits.startsWith("91")
+        ? digits.slice(2)
+        : digits.length === 11 && digits.startsWith("0")
+          ? digits.slice(1)
+          : digits;
+    return /^\+?[\d\s().-]+$/.test(value) && /^[6-9]\d{9}$/.test(nationalNumber);
+  })
+  .transform((value) => {
+    const digits = value.replace(/\D/g, "");
+    const nationalNumber =
+      digits.length === 12 && digits.startsWith("91")
+        ? digits.slice(2)
+        : digits.length === 11 && digits.startsWith("0")
+          ? digits.slice(1)
+          : digits;
+    return `+91${nationalNumber}`;
+  });
 const optionalAttribution = z.string().trim().max(500).optional().default("");
 const optionalEmail = z
   .union([z.string().trim().email().max(254), z.literal("")])
@@ -82,7 +107,7 @@ const chatbotEnquirySchema = z.object({
   initialIntent: z.string().trim().max(2000).optional().default(""),
   name: chatbotName,
   email: optionalEmail,
-  phone: flexiblePhone,
+  phone: indianMobile,
   selectedProject: z.string().trim().min(2).max(160),
   selectedProjectSlug: z.string().trim().max(160).optional().default(""),
   requirement: z.string().trim().min(2).max(2000),
@@ -193,10 +218,7 @@ export async function POST(request: Request) {
     const data = result.data;
 
     if (data.type === "ai-chatbot-enquiry") {
-      const phoneDigits = data.phone.replace(/\D/g, "");
-      const normalizedPhone = data.phone.startsWith("+")
-        ? `+${phoneDigits}`
-        : phoneDigits;
+      const normalizedPhone = data.phone;
       const existingSubmission = await payload.find({
         collection: "omana-enquiries",
         depth: 0,
