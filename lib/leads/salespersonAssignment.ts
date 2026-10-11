@@ -117,12 +117,12 @@ export async function getOrCreateSalespersonAssignment(
                 $inc: { sequence: 1 },
                 $setOnInsert: { testRunId: counterScope.runId },
               },
-              { new: true, setDefaultsOnInsert: true, upsert: true },
+              { returnDocument: "after", setDefaultsOnInsert: true, upsert: true },
             ).lean()
           : await Counter.findOneAndUpdate(
               { key: COUNTER_KEY },
               { $inc: { sequence: 1 } },
-              { new: true, setDefaultsOnInsert: true, upsert: true },
+              { returnDocument: "after", setDefaultsOnInsert: true, upsert: true },
             ).lean();
 
         if (!counter) throw new Error("Unable to reserve salesperson assignment sequence");
@@ -133,7 +133,7 @@ export async function getOrCreateSalespersonAssignment(
           const claimed = await Claim.findOneAndUpdate(
             { leadId: normalizedLeadId },
             { $setOnInsert: proposed },
-            { new: true, setDefaultsOnInsert: true, upsert: true },
+            { returnDocument: "after", setDefaultsOnInsert: true, upsert: true },
           ).lean();
 
           if (!claimed) throw new Error("Unable to claim salesperson assignment");

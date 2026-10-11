@@ -11,7 +11,10 @@
     "typecheck": "tsc --noEmit --incremental false",
     "test:rag": "tsx --test tests/rag/*.test.ts",
     "test:qualification": "tsx --test tests/leads/qualification.test.ts",
-    "test:assignment": "tsx --test tests/leads/assignment.test.ts"
+    "test:assignment": "tsx --test tests/leads/assignment.test.ts",
+    "test:mongodb-target": "node --import tsx --test tests/leads/mongodb-test-target.test.ts",
+    "test:qualification:integration": "node --import tsx tests/leads/qualification.integration.ts",
+    "test:assignment:integration": "node --import tsx tests/leads/assignment.integration.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
