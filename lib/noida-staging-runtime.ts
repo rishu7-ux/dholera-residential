@@ -69,7 +69,7 @@ export function resolveNoidaStagingMongoUri(env: StagingEnvironment): string | u
       throw new Error("Noida staging MongoDB target contains an insecure option");
     }
   }
-  if (!seen.has("authsource") || process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
+  if (!seen.has("authsource") || env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
     throw new Error("Noida staging MongoDB target must preserve authenticated TLS");
   }
 

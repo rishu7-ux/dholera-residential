@@ -1,5 +1,7 @@
 export type SMTPEnvironment = Record<string, string | undefined>;
 
+export const SMTP_ENABLE_VARIABLE = "NOIDA_SMTP_DELIVERY_ENABLED";
+
 export type PayloadSMTPConfiguration = {
   defaultFromAddress: string;
   defaultFromName: string;
@@ -10,6 +12,12 @@ export type PayloadSMTPConfiguration = {
     requireTLS: boolean;
     logger: false;
     debug: false;
+    connectionTimeout: 30000;
+    greetingTimeout: 15000;
+    socketTimeout: 30000;
+    disableFileAccess: true;
+    disableUrlAccess: true;
+    maxRecipients: 1;
     tls: { minVersion: "TLSv1.2"; rejectUnauthorized: true };
     auth?: { user: string; pass: string };
   };
@@ -68,8 +76,29 @@ export function getPayloadSMTPConfiguration(
       requireTLS: !secure,
       logger: false,
       debug: false,
+      connectionTimeout: 30000,
+      greetingTimeout: 15000,
+      socketTimeout: 30000,
+      disableFileAccess: true,
+      disableUrlAccess: true,
+      maxRecipients: 1,
       tls: { minVersion: "TLSv1.2", rejectUnauthorized: true },
       ...(user && pass ? { auth: { user, pass } } : {}),
     },
   };
+}
+
+/** A complete SMTP configuration alone never enables outbound delivery. */
+export function getEnabledSMTPConfiguration(env: SMTPEnvironment): PayloadSMTPConfiguration | undefined {
+  const enabled = env[SMTP_ENABLE_VARIABLE];
+  if (enabled !== undefined && enabled !== "0" && enabled !== "1") {
+    throw new Error(`${SMTP_ENABLE_VARIABLE} must be 0 or 1.`);
+  }
+  if (enabled !== "1") return undefined;
+  const configuration = getPayloadSMTPConfiguration(env);
+  if (!configuration) throw new Error("SMTP delivery is enabled without a complete SMTP configuration.");
+  if (env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
+    throw new Error("SMTP delivery requires certificate verification.");
+  }
+  return configuration;
 }

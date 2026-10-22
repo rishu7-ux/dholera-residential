@@ -36,4 +36,5 @@ test("rejects routing, TLS and authentication overrides", () => {
     "&tlsInsecure=true", "&tls=false", "&authSource=other", "&directConnection=true",
     "&replicaSet=other", "&srvServiceName=other", "&authMechanism=PLAIN", "&retryWrites=false",
   ]) assert.throws(() => resolveNoidaStagingMongoUri({ ...staging, MONGODB_URI: uri + option }));
+  assert.throws(() => resolveNoidaStagingMongoUri({ ...staging, NODE_TLS_REJECT_UNAUTHORIZED: "0" }));
 });
