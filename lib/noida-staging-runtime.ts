@@ -7,7 +7,65 @@ const ALLOWED_OPTIONS = new Set(["authsource", "retrywrites", "w", "appname", "t
 
 type StagingEnvironment = Record<string, string | undefined>;
 
+export function prepareNoidaLocalStagingEnvironment(env: StagingEnvironment): StagingEnvironment {
+  if (env.NOIDA_LOCAL_STAGING_MODE !== "1") {
+    throw new Error("Noida local staging mode must be explicitly enabled");
+  }
+  if (env.NODE_ENV !== undefined && env.NODE_ENV !== "development") {
+    throw new Error("Noida local staging cannot run outside development mode");
+  }
+  const localEnv = { ...env, NODE_ENV: "development", NOIDA_LOCAL_STAGING_BIND: "127.0.0.1" };
+  resolveNoidaStagingMongoUri(localEnv);
+  return localEnv;
+}
+
 export function resolveNoidaStagingMongoUri(env: StagingEnvironment): string | undefined {
+  if (env.NOIDA_LOCAL_STAGING_MODE !== undefined) {
+    if (env.NOIDA_LOCAL_STAGING_MODE !== "1") {
+      throw new Error("Noida local staging mode must be 1");
+    }
+    if (env.NODE_ENV !== "development" || env.NOIDA_LOCAL_STAGING_BIND !== "127.0.0.1") {
+      throw new Error("Noida local staging requires the loopback development launcher");
+    }
+    if (
+      Object.keys(env).some((key) => key === "VERCEL" || key.startsWith("VERCEL_")) ||
+      env.NOIDA_STAGING_MODE !== undefined ||
+      env.NOIDA_STAGING_PROJECT_ID !== undefined ||
+      env.MONGODB_TEST_URI !== undefined
+    ) {
+      throw new Error("Noida local staging cannot use deployment or existing TEST settings");
+    }
+    if (
+      env.PAYLOAD_DROP_DATABASE !== undefined ||
+      (env.NOIDA_SMTP_DELIVERY_ENABLED !== undefined && env.NOIDA_SMTP_DELIVERY_ENABLED !== "0") ||
+      env.BLOB_READ_WRITE_TOKEN !== undefined ||
+      env.OPENAI_API_KEY !== undefined ||
+      env.QDRANT_URL !== undefined ||
+      env.QDRANT_API_KEY !== undefined ||
+      env.RAG_INDEX_SECRET !== undefined ||
+      env.NODE_OPTIONS !== undefined ||
+      env.NODE_PATH !== undefined ||
+      Object.keys(env).some((key) => key.startsWith("SMTP_") || key.endsWith("_INGEST_SECRET"))
+    ) {
+      throw new Error("Noida local staging has an unsafe startup setting");
+    }
+    if (
+      !env.PAYLOAD_SECRET ||
+      env.PAYLOAD_SECRET.length < 32 ||
+      /[<>]/.test(env.PAYLOAD_SECRET) ||
+      /^(?:placeholder|change-?me|your[-_].*|password)$/i.test(env.PAYLOAD_SECRET)
+    ) {
+      throw new Error("Noida local staging requires a separate strong Payload secret");
+    }
+
+    validateStagingMongoUri(env);
+    const uri = new URL(env.MONGODB_URI as string);
+    if (uri.searchParams.get("tls") !== "true" || /[<>]/.test(decodeURIComponent(uri.password))) {
+      throw new Error("Noida local staging requires explicit TLS and a real database password");
+    }
+    return env.MONGODB_URI;
+  }
+
   const mode = env.NOIDA_STAGING_MODE;
   const projectId = env.NOIDA_STAGING_PROJECT_ID;
   const deployedProjectId = env.VERCEL_PROJECT_ID;
@@ -22,6 +80,11 @@ export function resolveNoidaStagingMongoUri(env: StagingEnvironment): string | u
     throw new Error("Noida staging is attached to the wrong Vercel project");
   }
 
+  validateStagingMongoUri(env);
+  return env.MONGODB_URI;
+}
+
+function validateStagingMongoUri(env: StagingEnvironment): void {
   let uri: URL;
   try {
     uri = new URL(env.MONGODB_URI ?? "");
@@ -72,6 +135,4 @@ export function resolveNoidaStagingMongoUri(env: StagingEnvironment): string | u
   if (!seen.has("authsource") || env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
     throw new Error("Noida staging MongoDB target must preserve authenticated TLS");
   }
-
-  return env.MONGODB_URI;
 }

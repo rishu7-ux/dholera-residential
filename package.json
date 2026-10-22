@@ -9,6 +9,7 @@
     "build:test": "node --import tsx scripts/build-isolated.mjs",
     "build:test:turbopack": "node --import tsx scripts/build-isolated.mjs --turbopack",
     "dev:test": "node --import tsx scripts/dev-test.mjs",
+    "dev:local-staging": "node --import tsx scripts/noida-local-staging.mjs",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit --incremental false",

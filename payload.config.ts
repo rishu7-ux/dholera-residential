@@ -640,6 +640,9 @@ export default buildConfig({
 
   db: mongooseAdapter({
     url: resolveNoidaStagingMongoUri(process.env) || "",
+    ...(process.env.NOIDA_LOCAL_STAGING_MODE === "1"
+      ? { connectOptions: { autoIndex: false }, ensureIndexes: false }
+      : {}),
   }),
 
   /* =====================================================

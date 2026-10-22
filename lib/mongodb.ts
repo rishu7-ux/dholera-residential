@@ -32,7 +32,10 @@ async function connectDB() {
 
   if (!cached.promise) {
     // MONGODB_URI is validated above; assert non-null for TypeScript
-    cached.promise = mongoose.connect(MONGODB_URI as string);
+    cached.promise = mongoose.connect(
+      MONGODB_URI as string,
+      process.env.NOIDA_LOCAL_STAGING_MODE === "1" ? { autoIndex: false } : undefined,
+    );
   }
 
   try {
