@@ -1,6 +1,5 @@
-import type { Access, CollectionConfig } from "payload";
-
-const authenticated: Access = ({ req }) => Boolean(req.user);
+import type { CollectionConfig } from "payload";
+import { crmContentHidden, superAdminOnly } from "../lib/crm/access";
 
 export const AIKnowledge: CollectionConfig = {
   slug: "ai-knowledge",
@@ -11,15 +10,16 @@ export const AIKnowledge: CollectionConfig = {
   admin: {
     useAsTitle: "title",
     group: "AI & Automation",
+    hidden: crmContentHidden,
     defaultColumns: ["title", "site", "category", "published", "updatedAt"],
     description:
       "Curated, verified source material for the central RAG service. Draft entries are never indexed.",
   },
   access: {
-    create: authenticated,
-    read: authenticated,
-    update: authenticated,
-    delete: authenticated,
+    create: superAdminOnly,
+    read: superAdminOnly,
+    update: superAdminOnly,
+    delete: superAdminOnly,
   },
   fields: [
     {

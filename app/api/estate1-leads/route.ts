@@ -1,9 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
 
-import { getPayload } from "payload";
 import { z } from "zod";
 
-import config from "../../../payload.config";
+import { ingestLeadWithLegacy } from "../../../lib/crm/ingest";
 
 const enquirySchema = z.object({
   type: z.literal("enquiry"),
@@ -12,6 +11,7 @@ const enquirySchema = z.object({
   phone: z.string().regex(/^[6-9]\d{9}$/),
   message: z.string().trim().max(500),
   source: z.enum(["estate1-popup-form", "estate1-side-enquiry-form"]),
+  consent: z.literal(true),
 });
 
 const contactSchema = z.object({
@@ -44,25 +44,17 @@ export async function POST(request: Request) {
     const result = leadSchema.safeParse(await request.json().catch(() => null));
     if (!result.success) return Response.json({ success: false, message: "Invalid lead details" }, { status: 400 });
 
-    const payload = await getPayload({ config });
-    if (result.data.type === "enquiry") {
-      await payload.create({
-        // Regenerate payload-types.ts with the project-supported Node runtime before deployment.
-        collection: "estate1-enquiries" as never,
-        data: {
+    const legacyCollection = result.data.type === "enquiry" ? "estate1-enquiries" : "estate1-contact-messages";
+    const legacyData = result.data.type === "enquiry"
+      ? {
           name: result.data.name,
           email: result.data.email,
           phone: result.data.phone,
           message: result.data.message,
           source: result.data.source,
           status: "new",
-        } as never,
-      });
-    } else {
-      await payload.create({
-        // Regenerate payload-types.ts with the project-supported Node runtime before deployment.
-        collection: "estate1-contact-messages" as never,
-        data: {
+        }
+      : {
           name: result.data.name,
           email: result.data.email,
           phone: result.data.phone,
@@ -71,9 +63,22 @@ export async function POST(request: Request) {
           consent: result.data.consent,
           source: result.data.source,
           status: "new",
-        } as never,
-      });
-    }
+        };
+    const ingress = await ingestLeadWithLegacy({
+      name: result.data.name,
+      email: result.data.email,
+      phone: result.data.phone,
+      website: "dholera-estate-1",
+      leadType: result.data.type,
+      source: result.data.source,
+      project: "Dholera Estate 1",
+      message: result.data.type === "enquiry" ? result.data.message : result.data.comments,
+      budget: result.data.type === "contact" ? result.data.budget : undefined,
+      consent: result.data.consent,
+      idempotencyKey: request.headers.get("x-idempotency-key") || undefined,
+    }, { collection: legacyCollection, data: legacyData });
+
+    if (ingress.duplicate) return Response.json({ success: true, duplicate: true }, { status: 200 });
 
     return Response.json({ success: true, message: "Lead saved successfully" }, { status: 201 });
   } catch (error) {

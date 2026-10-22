@@ -4,11 +4,8 @@ import { getPayload } from "payload";
 import { z } from "zod";
 
 import config from "../../../payload.config";
+import { ingestLeadWithLegacy, LegacyReconciliationRequiredError, type LegacyLeadWrite } from "../../../lib/crm/ingest";
 import { qualifyLead } from "../../../lib/leads/qualification";
-import {
-  currentAssignmentCounterScope,
-  getOrCreateSalespersonAssignment,
-} from "../../../lib/leads/salespersonAssignment";
 
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
 const MAX_BODY_CHARACTERS = 32_768;
@@ -146,34 +143,6 @@ function isAuthorized(request: Request) {
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
-async function assignChatbotLead(
-  payload: Awaited<ReturnType<typeof getPayload>>,
-  leadId: string | number,
-) {
-  try {
-    const assignment = await getOrCreateSalespersonAssignment(
-      payload,
-      leadId,
-      currentAssignmentCounterScope(),
-    );
-    if (!assignment) return;
-
-    await payload.update({
-      collection: "omana-enquiries",
-      id: leadId,
-      context: { automaticAssignment: true },
-      data: {
-        assignedSalesperson: assignment.salespersonId,
-        assignedAt: assignment.assignedAt,
-        assignmentSequence: assignment.sequence,
-        assignmentMode: "automatic",
-      },
-    });
-  } catch (error) {
-    console.error("Automatic salesperson assignment failed", error);
-  }
-}
-
 export async function POST(request: Request) {
   if (!isAuthorized(request)) {
     return Response.json(
@@ -214,10 +183,47 @@ export async function POST(request: Request) {
   }
 
   try {
-    const payload = await getPayload({ config });
     const data = result.data;
 
+    const centralInput = {
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      website: "omana-projects" as const,
+      leadType:
+        data.type === "ai-chatbot-enquiry"
+          ? "chatbot" as const
+          : data.type === "google-ads-enquiry"
+            ? "google-ads" as const
+            : data.type,
+      source: data.source,
+      project: data.selectedProject,
+      message: data.type === "ai-chatbot-enquiry" ? data.requirement : data.message,
+      budget: data.type === "ai-chatbot-enquiry" ? data.budget : undefined,
+      page: data.page,
+      consent: data.consent,
+      idempotencyKey:
+        data.type === "ai-chatbot-enquiry"
+          ? data.idempotencyKey
+          : request.headers.get("x-idempotency-key") || undefined,
+      attribution:
+        data.type === "ai-chatbot-enquiry" || data.type === "google-ads-enquiry"
+          ? {
+              utmSource: data.utmSource,
+              utmMedium: data.utmMedium,
+              utmCampaign: data.utmCampaign,
+              utmTerm: data.utmTerm,
+              utmContent: data.utmContent,
+              gclid: data.gclid,
+              gbraid: data.gbraid,
+              wbraid: data.wbraid,
+              referrer: data.referrer,
+            }
+          : undefined,
+    };
+
     if (data.type === "ai-chatbot-enquiry") {
+      const payload = await getPayload({ config });
       const normalizedPhone = data.phone;
       const existingSubmission = await payload.find({
         collection: "omana-enquiries",
@@ -244,6 +250,25 @@ export async function POST(request: Request) {
 
       if (existingSubmission.docs.length > 0) {
         const existingLead = existingSubmission.docs[0];
+        if (!existingLead.idempotencyKey) throw new LegacyReconciliationRequiredError(String(existingLead.id), "omana-enquiries", undefined);
+        const centralForExisting = await payload.find({
+          collection: "central-leads",
+          depth: 0,
+          limit: 1,
+          pagination: false,
+          overrideAccess: true,
+          where: { and: [
+            { idempotencyKey: { equals: existingLead.idempotencyKey } },
+            { website: { equals: "omana-projects" } },
+            { source: { equals: "ai-chatbot" } },
+          ] },
+        });
+        const linkedCentral = centralForExisting.docs[0];
+        if (
+          !linkedCentral ||
+          linkedCentral.legacyCollection !== "omana-enquiries" ||
+          String(linkedCentral.legacyId ?? "") !== String(existingLead.id)
+        ) throw new LegacyReconciliationRequiredError(String(existingLead.id), "omana-enquiries", existingLead.idempotencyKey);
         if (
           !existingLead.qualification &&
           existingLead.qualificationMode !== "manual"
@@ -268,48 +293,63 @@ export async function POST(request: Request) {
             },
           });
         }
-        if (
-          !existingLead.assignedSalesperson &&
-          existingLead.assignmentMode !== "manual"
-        ) {
-          await assignChatbotLead(payload, existingLead.id);
-        }
         return Response.json(
           { success: true, duplicate: true },
           { status: 200, headers: NO_STORE_HEADERS },
         );
       }
+    }
 
-      const createdLead = await payload.create({
-        collection: "omana-enquiries",
-        data: {
-          initialIntent: data.initialIntent,
-          name: data.name,
-          email: data.email || undefined,
-          phone: normalizedPhone,
-          selectedProject: data.selectedProject,
-          selectedProjectSlug: data.selectedProjectSlug,
-          requirement: data.requirement,
-          plotSize: data.plotSize,
-          budget: data.budget,
-          purchaseTimeline: data.purchaseTimeline,
-          message: data.requirement,
-          page: data.page,
-          source: data.source,
-          idempotencyKey: data.idempotencyKey,
-          utmSource: data.utmSource,
-          utmMedium: data.utmMedium,
-          utmCampaign: data.utmCampaign,
-          utmTerm: data.utmTerm,
-          utmContent: data.utmContent,
-          gclid: data.gclid,
-          gbraid: data.gbraid,
-          wbraid: data.wbraid,
-          referrer: data.referrer,
-          consent: data.consent,
-          status: "new",
-        },
-      });
+    let legacy: LegacyLeadWrite;
+    if (data.type === "ai-chatbot-enquiry") {
+      legacy = { collection: "omana-enquiries", data: {
+        initialIntent: data.initialIntent, name: data.name, email: data.email || undefined,
+        phone: data.phone, selectedProject: data.selectedProject,
+        selectedProjectSlug: data.selectedProjectSlug, requirement: data.requirement,
+        plotSize: data.plotSize, budget: data.budget, purchaseTimeline: data.purchaseTimeline,
+        message: data.requirement, page: data.page, source: data.source,
+        idempotencyKey: data.idempotencyKey, utmSource: data.utmSource,
+        utmMedium: data.utmMedium, utmCampaign: data.utmCampaign,
+        utmTerm: data.utmTerm, utmContent: data.utmContent,
+        gclid: data.gclid, gbraid: data.gbraid, wbraid: data.wbraid,
+        referrer: data.referrer, consent: data.consent,
+      } };
+    } else if (data.type === "enquiry") {
+      legacy = { collection: "omana-enquiries", data: {
+        name: data.name, email: data.email, phone: data.phone,
+        selectedProject: data.selectedProject, selectedProjectSlug: data.selectedProjectSlug,
+        message: data.message, page: data.page, source: data.source, consent: data.consent,
+      } };
+    } else if (data.type === "contact") {
+      legacy = { collection: "omana-contact-messages", data: {
+        name: data.name, email: data.email, phone: data.phone,
+        selectedProject: data.selectedProject, selectedProjectSlug: data.selectedProjectSlug,
+        message: data.message, page: data.page, source: data.source, consent: data.consent,
+      } };
+    } else {
+      legacy = { collection: "omana-google-ads-enquiries", data: {
+        name: data.name, email: data.email, phone: data.phone,
+        selectedProject: data.selectedProject, selectedProjectSlug: data.selectedProjectSlug,
+        message: data.message, page: data.page, source: data.source, consent: data.consent,
+        utmSource: data.utmSource, utmMedium: data.utmMedium,
+        utmCampaign: data.utmCampaign, utmTerm: data.utmTerm,
+        utmContent: data.utmContent, gclid: data.gclid,
+        gbraid: data.gbraid, wbraid: data.wbraid,
+        referrer: data.referrer,
+      } };
+    }
+
+    const saved = await ingestLeadWithLegacy(centralInput, legacy);
+    if (saved.duplicate) {
+      return Response.json(
+        { success: true, duplicate: true },
+        { status: 200, headers: NO_STORE_HEADERS },
+      );
+    }
+
+    if (data.type === "ai-chatbot-enquiry") {
+      if (!saved.legacyId) throw new Error("Committed chatbot lead has no legacy ID");
+      const payload = await getPayload({ config });
       const qualification = qualifyLead({
         initialIntent: data.initialIntent,
         selectedProject: data.selectedProject,
@@ -319,7 +359,7 @@ export async function POST(request: Request) {
       });
       await payload.update({
         collection: "omana-enquiries",
-        id: createdLead.id,
+        id: saved.legacyId,
         context: { automaticQualification: true },
         data: {
           qualification: qualification.qualification,
@@ -327,64 +367,6 @@ export async function POST(request: Request) {
           qualificationVersion: qualification.version,
           qualifiedAt: new Date().toISOString(),
           qualificationMode: "automatic",
-        },
-      });
-      await assignChatbotLead(payload, createdLead.id);
-    } else if (data.type === "enquiry") {
-      await payload.create({
-        collection: "omana-enquiries",
-        data: {
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          selectedProject: data.selectedProject,
-          selectedProjectSlug: data.selectedProjectSlug,
-          message: data.message,
-          page: data.page,
-          source: data.source,
-          consent: data.consent,
-          status: "new",
-        },
-      });
-    } else if (data.type === "contact") {
-      await payload.create({
-        collection: "omana-contact-messages",
-        data: {
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          selectedProject: data.selectedProject,
-          selectedProjectSlug: data.selectedProjectSlug,
-          message: data.message,
-          page: data.page,
-          source: data.source,
-          consent: data.consent,
-          status: "new",
-        },
-      });
-    } else {
-      await payload.create({
-        collection: "omana-google-ads-enquiries",
-        data: {
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          selectedProject: data.selectedProject,
-          selectedProjectSlug: data.selectedProjectSlug,
-          message: data.message,
-          page: data.page,
-          source: data.source,
-          consent: data.consent,
-          utmSource: data.utmSource,
-          utmMedium: data.utmMedium,
-          utmCampaign: data.utmCampaign,
-          utmTerm: data.utmTerm,
-          utmContent: data.utmContent,
-          gclid: data.gclid,
-          gbraid: data.gbraid,
-          wbraid: data.wbraid,
-          referrer: data.referrer,
-          status: "new",
         },
       });
     }

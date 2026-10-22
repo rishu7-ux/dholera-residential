@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
+import { resolveNoidaStagingMongoUri } from "./noida-staging-runtime";
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = resolveNoidaStagingMongoUri(process.env);
 
 if (!MONGODB_URI) {
   throw new Error(
@@ -40,12 +41,12 @@ async function connectDB() {
     console.log("✅ MongoDB connected successfully");
 
     return cached.conn;
-  } catch (error) {
+  } catch {
     cached.promise = null;
 
-    console.error("❌ MongoDB connection error:", error);
+    console.error("MongoDB connection failed");
 
-    throw error;
+    throw new Error("MongoDB connection failed");
   }
 }
 

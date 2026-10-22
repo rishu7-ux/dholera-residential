@@ -1,12 +1,12 @@
-import type { Access, CollectionConfig, Field } from "payload";
-const authenticated: Access = ({ req }) => Boolean(req.user);
-const access = { create: authenticated, read: authenticated, update: authenticated, delete: authenticated };
+import type { CollectionConfig, Field } from "payload";
+import { crmContentHidden, legacyLeadAdminAccess } from "../lib/crm/access";
+const access = legacyLeadAdminAccess;
 const status: Field = { name: "status", type: "select", defaultValue: "new", options: [{label:"New",value:"new"},{label:"Contacted",value:"contacted"},{label:"Follow Up",value:"follow-up"},{label:"Qualified",value:"qualified"},{label:"Closed",value:"closed"}] };
 
 export const DholeraEstatesEnquiries: CollectionConfig = {
   slug: "dholera-estates-enquiries",
   labels: { singular: "Dholera Estates Enquiry", plural: "Dholera Estates Enquiries" },
-  admin: { useAsTitle: "name", group: "Dholera Estates Leads", defaultColumns: ["name","email","phone","property","source","status","createdAt"] },
+  admin: { useAsTitle: "name", group: "Dholera Estates Leads", defaultColumns: ["name","email","phone","property","source","status","createdAt"], hidden: crmContentHidden },
   access,
   fields: [
     {name:"name",type:"text",required:true},{name:"email",type:"email",required:true},{name:"phone",type:"text",required:true},
@@ -18,7 +18,7 @@ export const DholeraEstatesEnquiries: CollectionConfig = {
 export const DholeraEstatesContactMessages: CollectionConfig = {
   slug: "dholera-estates-contact-messages",
   labels: { singular: "Dholera Estates Contact Message", plural: "Dholera Estates Contact Messages" },
-  admin: { useAsTitle:"name", group:"Dholera Estates Leads", defaultColumns:["name","email","phone","budget","status","createdAt"] },
+  admin: { useAsTitle:"name", group:"Dholera Estates Leads", defaultColumns:["name","email","phone","budget","status","createdAt"], hidden: crmContentHidden },
   access,
   fields: [
     {name:"name",type:"text",required:true},{name:"email",type:"email",required:true},{name:"phone",type:"text",required:true},

@@ -1,7 +1,7 @@
-import type { Access, CollectionConfig, Field } from "payload";
+import type { CollectionConfig, Field } from "payload";
+import { crmContentHidden, legacyLeadAdminAccess } from "../lib/crm/access";
 
-const authenticated: Access = ({ req }) => Boolean(req.user);
-const leadAccess = { create: authenticated, read: authenticated, update: authenticated, delete: authenticated };
+const leadAccess = legacyLeadAdminAccess;
 
 const statusField: Field = {
   name: "status",
@@ -22,6 +22,7 @@ export const Estate1Enquiries: CollectionConfig = {
   admin: {
     useAsTitle: "name",
     group: "Dholera Estate 1 Leads",
+    hidden: crmContentHidden,
     defaultColumns: ["name", "email", "phone", "source", "status", "createdAt"],
   },
   access: leadAccess,
@@ -50,6 +51,7 @@ export const Estate1ContactMessages: CollectionConfig = {
   admin: {
     useAsTitle: "name",
     group: "Dholera Estate 1 Leads",
+    hidden: crmContentHidden,
     defaultColumns: ["name", "email", "phone", "budget", "status", "createdAt"],
   },
   access: leadAccess,

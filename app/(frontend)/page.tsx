@@ -22,7 +22,9 @@ export const metadata: Metadata = {
   },
 };
 
-export const revalidate = 300;
+// Render the homepage at request time so builds never query Payload/MongoDB.
+// BlogSection keeps its own five-minute data cache.
+export const revalidate = 0;
 
 export default function Home() {
   return (

@@ -14,6 +14,7 @@ import config from "@/payload.config";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import SideEnquiry from "@/components/SideEnquiry";
 
 export const metadata: Metadata = {
   title: "Dholera SIR Blog | Plot Guides & Market Updates",
@@ -103,6 +104,7 @@ export default async function BlogPage() {
     <>
       <TopBar />
       <Header />
+      <SideEnquiry />
 
       <main className="min-h-screen bg-[#FFFDFB]">
         {/* HERO */}

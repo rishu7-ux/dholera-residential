@@ -1,9 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
 
-import { getPayload } from "payload";
 import { z } from "zod";
 
-import config from "../../../payload.config";
+import { ingestLeadWithLegacy } from "../../../lib/crm/ingest";
 
 const enquirySchema = z.object({
   type: z.literal("enquiry"),
@@ -13,6 +12,7 @@ const enquirySchema = z.object({
   property: z.string().trim().min(1).max(120),
   message: z.string().trim().max(500),
   source: z.enum(["estate2-popup-form", "estate2-side-enquiry-form"]),
+  consent: z.literal(true),
 });
 
 const contactSchema = z.object({
@@ -80,12 +80,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const payload = await getPayload({ config });
-
-    if (result.data.type === "enquiry") {
-      await payload.create({
-        collection: "estate2-enquiries",
-        data: {
+    const legacyCollection = result.data.type === "enquiry" ? "estate2-enquiries" : "estate2-contact-messages";
+    const legacyData = result.data.type === "enquiry"
+      ? {
           name: result.data.name,
           email: result.data.email,
           phone: result.data.phone,
@@ -93,12 +90,8 @@ export async function POST(request: Request) {
           message: result.data.message,
           source: result.data.source,
           status: "new",
-        },
-      });
-    } else {
-      await payload.create({
-        collection: "estate2-contact-messages",
-        data: {
+        }
+      : {
           name: result.data.name,
           email: result.data.email,
           phone: result.data.phone,
@@ -108,8 +101,23 @@ export async function POST(request: Request) {
           consent: result.data.consent,
           source: result.data.source,
           status: "new",
-        },
-      });
+        };
+    const ingress = await ingestLeadWithLegacy({
+      name: result.data.name,
+      email: result.data.email,
+      phone: result.data.phone,
+      website: "dholera-estate-2",
+      leadType: result.data.type,
+      source: result.data.source,
+      project: result.data.type === "enquiry" ? result.data.property : result.data.propertyType,
+      message: result.data.type === "enquiry" ? result.data.message : result.data.comments,
+      budget: result.data.type === "contact" ? result.data.budget : undefined,
+      consent: result.data.consent,
+      idempotencyKey: request.headers.get("x-idempotency-key") || undefined,
+    }, { collection: legacyCollection, data: legacyData });
+
+    if (ingress.duplicate) {
+      return Response.json({ success: true, duplicate: true }, { status: 200 });
     }
 
     return Response.json(

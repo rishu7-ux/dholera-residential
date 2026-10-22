@@ -6,7 +6,7 @@ type MongoTarget = {
   uri: URL;
 };
 
-const EXPECTED_TEST_HOSTNAME = "cluster0.oqcardp.mongodb.net";
+const EXPECTED_TEST_HOSTNAME = "cluster0.zshxfui.mongodb.net";
 const EXPECTED_TEST_DATABASE = "omana-phase5-test-2";
 const ROUTING_OVERRIDE_OPTIONS = new Set([
   "directconnection",

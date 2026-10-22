@@ -1,4 +1,5 @@
 import type { CollectionConfig } from "payload";
+import { crmContentHidden, superAdminOnly } from "../lib/crm/access";
 import {
   BoldFeature,
   FixedToolbarFeature,
@@ -18,13 +19,14 @@ export const DholeraEstatesBlogs: CollectionConfig = {
   admin: {
     useAsTitle: "blogTitle",
     group: "Dholera Estates Content",
+    hidden: crmContentHidden,
     defaultColumns: ["blogTitle", "slug", "status", "publishedAt", "createdAt"],
   },
   access: {
     read: () => true,
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => Boolean(req.user),
+    create: superAdminOnly,
+    update: superAdminOnly,
+    delete: superAdminOnly,
   },
   fields: [
     { name: "blogTitle", label: "Blog Title", type: "text", required: true },

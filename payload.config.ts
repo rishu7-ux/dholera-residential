@@ -27,6 +27,10 @@ import { Estate1ContactMessages, Estate1Enquiries } from "./collections/Estate1L
 import { Estate1Blogs } from "./collections/Estate1Blogs.ts";
 import { OmanaBlogs } from "./collections/OmanaBlogs.ts";
 import { AIKnowledge } from "./collections/AIKnowledge.ts";
+import { CentralLeads, CrmActivities, CrmOffices, CrmTeams } from "./collections/Crm.ts";
+import { crmContentHidden, isSuperAdmin, legacyLeadAdminAccess, superAdminField, superAdminOnly } from "./lib/crm/access";
+import { createPasswordSetupEmail } from "./lib/crm/password-setup-email";
+import { resolveNoidaStagingMongoUri } from "./lib/noida-staging-runtime";
 import {
   OmanaContactMessages,
   OmanaEnquiries,
@@ -38,17 +42,133 @@ import {
    USERS COLLECTION
 ========================================================= */
 
-const Users: CollectionConfig = {
+export const Users: CollectionConfig = {
   slug: "users",
 
-  auth: true,
+  auth: {
+    forgotPassword: {
+      // Staff activation uses Payload's native single-use reset flow. A short
+      // expiry limits the exposure window for one-time setup links.
+      expiration: 30 * 60 * 1000,
+      generateEmailSubject: () => "Set or reset your Omana CMS password",
+      generateEmailHTML: (emailArgs) => {
+        const { req, token, user } = emailArgs ?? {};
+        if (!req || !token || !user) throw new Error("Password setup email context is incomplete.");
+        return createPasswordSetupEmail({
+          adminURL: req.payload.getAdminURL(),
+          resetPath: req.payload.config.admin.routes.reset,
+          token,
+          displayName: String(user.name || user.email || "team member"),
+        }).html;
+      },
+    },
+  },
+
+  endpoints: [
+    {
+      path: "/:id/invite",
+      method: "post",
+      handler: async (req) => {
+        const actor = req.user as (typeof req.user & { role?: string }) | null;
+        if (!actor || actor.role !== "super-admin") {
+          return Response.json({ error: "Forbidden" }, { status: 403 });
+        }
+
+        let inviteeId: string | undefined;
+        try {
+          const invitee = await req.payload.findByID({
+            collection: "users",
+            id: String(req.routeParams?.id ?? ""),
+            req,
+            overrideAccess: false,
+            depth: 0,
+          });
+          const inviteeRole = (invitee as typeof invitee & { role?: string }).role;
+          if (inviteeRole !== "salesperson" && inviteeRole !== "team-leader") {
+            return Response.json({ error: "Invite unavailable" }, { status: 404 });
+          }
+          if (req.payload.email.name === "console") {
+            return Response.json({ error: "Email delivery is not configured. No setup link was generated." }, { status: 503 });
+          }
+          inviteeId = String(invitee.id);
+
+          // Payload stores an expiring reset token and delivers the raw token
+          // only in the email body. Never return or log the token here.
+          await req.payload.forgotPassword({
+            collection: "users",
+            data: { email: invitee.email },
+            req,
+            overrideAccess: false,
+          });
+          return Response.json({ message: "If the account is eligible, a setup link has been sent." }, { status: 202 });
+        } catch {
+          // If token creation succeeded but delivery failed, invalidate the
+          // undelivered link before reporting failure. Do not log tokens.
+          if (inviteeId) {
+            try {
+              await req.payload.update({
+                collection: "users",
+                id: inviteeId,
+                data: { resetPasswordToken: null, resetPasswordExpiration: null },
+                overrideAccess: true,
+              });
+            } catch {
+              // Preserve the generic failure response if cleanup also fails.
+            }
+          }
+          return Response.json({ error: "Invitation delivery failed. No setup confirmation was sent." }, { status: 503 });
+        }
+      },
+    },
+  ],
 
   admin: {
     useAsTitle: "email",
     group: "Users",
+    hidden: crmContentHidden,
   },
 
-  fields: [],
+  access: {
+    create: superAdminOnly,
+    read: ({ req }) => {
+      if (!req.user) return false;
+      const user = req.user as typeof req.user & { role?: string; office?: string | number | { id?: string | number } };
+      if (!user.role || user.role === "super-admin") return true;
+      if (user.role === "team-leader" && user.office) {
+        const office = typeof user.office === "object" ? user.office.id : user.office;
+        return { office: { equals: office } } as import("payload").Where;
+      }
+      return { id: { equals: user.id } } as import("payload").Where;
+    },
+    update: ({ req }) => {
+      const user = req.user as (typeof req.user & { role?: string }) | null;
+      if (!user) return false;
+      return isSuperAdmin(user) || ({ id: { equals: user.id } } as import("payload").Where);
+    },
+    delete: superAdminOnly,
+  },
+
+  fields: [
+    {
+      name: "role",
+      type: "select",
+      required: true,
+      defaultValue: "salesperson",
+      saveToJWT: true,
+      options: [
+        { label: "Super Admin", value: "super-admin" },
+        { label: "Team Leader", value: "team-leader" },
+        { label: "Salesperson", value: "salesperson" },
+      ],
+      access: { update: superAdminField },
+    },
+    { name: "name", type: "text", required: true },
+    { name: "office", type: "relationship", relationTo: "crm-offices", saveToJWT: true, index: true, access: { update: superAdminField } },
+    { name: "active", type: "checkbox", required: true, defaultValue: true, index: true, access: { update: superAdminField } },
+    { name: "eligibleForAssignment", type: "checkbox", required: true, defaultValue: true, index: true, access: { update: superAdminField } },
+    { name: "rotationOrder", type: "number", min: 1, index: true, access: { update: superAdminField } },
+    { name: "team", type: "relationship", relationTo: "crm-teams", saveToJWT: true, index: true, access: { update: superAdminField } },
+  ],
 };
 
 /* =========================================================
@@ -61,6 +181,7 @@ const Enquiries: CollectionConfig = {
   admin: {
     useAsTitle: "name",
     group: "Leads",
+    hidden: crmContentHidden,
 
     defaultColumns: [
       "name",
@@ -73,10 +194,10 @@ const Enquiries: CollectionConfig = {
   },
 
   access: {
-    read: ({ req }) => Boolean(req.user),
+    read: legacyLeadAdminAccess.read,
     create: () => true,
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => Boolean(req.user),
+    update: legacyLeadAdminAccess.update,
+    delete: legacyLeadAdminAccess.delete,
   },
 
   fields: [
@@ -163,6 +284,7 @@ const ContactMessages: CollectionConfig = {
   admin: {
     useAsTitle: "name",
     group: "Leads",
+    hidden: crmContentHidden,
 
     defaultColumns: [
       "name",
@@ -177,9 +299,9 @@ const ContactMessages: CollectionConfig = {
 
   access: {
     create: () => true,
-    read: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => Boolean(req.user),
+    read: legacyLeadAdminAccess.read,
+    update: legacyLeadAdminAccess.update,
+    delete: legacyLeadAdminAccess.delete,
   },
 
   fields: [
@@ -318,6 +440,7 @@ const Media: CollectionConfig = {
   admin: {
     useAsTitle: "alt",
     group: "Content",
+    hidden: crmContentHidden,
 
     defaultColumns: [
       "alt",
@@ -329,9 +452,9 @@ const Media: CollectionConfig = {
 
   access: {
     read: () => true,
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => Boolean(req.user),
+    create: superAdminOnly,
+    update: superAdminOnly,
+    delete: superAdminOnly,
   },
 
   upload: {
@@ -367,6 +490,7 @@ const Blogs: CollectionConfig = {
   admin: {
     useAsTitle: "title",
     group: "Content",
+    hidden: crmContentHidden,
 
     defaultColumns: [
       "title",
@@ -379,9 +503,9 @@ const Blogs: CollectionConfig = {
 
   access: {
     read: () => true,
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => Boolean(req.user),
+    create: superAdminOnly,
+    update: superAdminOnly,
+    delete: superAdminOnly,
   },
 
   fields: [
@@ -555,13 +679,14 @@ const Blogs: CollectionConfig = {
 
 export default buildConfig({
   secret: process.env.PAYLOAD_SECRET || "",
+  telemetry: false,
 
   /* =====================================================
      MONGODB
   ===================================================== */
 
   db: mongooseAdapter({
-    url: process.env.MONGODB_URI || "",
+    url: resolveNoidaStagingMongoUri(process.env) || "",
   }),
 
   /* =====================================================
@@ -573,6 +698,7 @@ export default buildConfig({
 
     components: {
       beforeNavLinks: [
+        "/components/admin/CrmNavLink.tsx#default",
         "/components/admin/ResidentialNavLink.tsx#default",
         "/components/admin/OmanaNavLink.tsx#default",
         "/components/admin/Estate2NavLink.tsx#default",
@@ -580,6 +706,12 @@ export default buildConfig({
         "/components/admin/IndustrialNavLink.tsx#default",
       ],
       views: {
+        crmDashboard: {
+          Component: "/components/admin/CrmDashboard.tsx#default",
+          path: "/crm-dashboard",
+          exact: true,
+          meta: { title: "Noida Sales CRM" },
+        },
         residentialDashboard: {
           Component:
             "/components/admin/ResidentialDashboard.tsx#default",
@@ -660,6 +792,10 @@ export default buildConfig({
 
   collections: [
     Users,
+    CrmOffices,
+    CrmTeams,
+    CentralLeads,
+    CrmActivities,
     Enquiries,
     ContactMessages,
     Estate1Enquiries,
