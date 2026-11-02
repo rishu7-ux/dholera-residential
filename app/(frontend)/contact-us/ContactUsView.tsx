@@ -75,6 +75,7 @@ type ContactFormData = z.infer<typeof contactSchema>;
 export default function ContactUsView() {
   const [submitted, setSubmitted] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [submissionKey, setSubmissionKey] = useState<string | null>(null);
 
   const {
     register,
@@ -110,11 +111,14 @@ export default function ContactUsView() {
     try {
       setServerError("");
 
+      const key = submissionKey ?? crypto.randomUUID();
+      setSubmissionKey(key);
       const response = await fetch("/api/contact-messages", {
         method: "POST",
 
         headers: {
           "Content-Type": "application/json",
+          "x-idempotency-key": key,
         },
 
         body: JSON.stringify({
@@ -133,7 +137,6 @@ export default function ContactUsView() {
 
       const result = await response.json();
 
-      console.log("Contact API Response:", result);
 
       if (!response.ok) {
         throw new Error(
@@ -143,18 +146,12 @@ export default function ContactUsView() {
         );
       }
 
-      console.log(
-        "✅ Contact saved successfully in Payload + MongoDB"
-      );
+      setSubmissionKey(null);
 
       reset();
 
       setSubmitted(true);
     } catch (error) {
-      console.error(
-        "❌ Contact submit error:",
-        error
-      );
 
       const message =
         error instanceof Error

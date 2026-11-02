@@ -189,6 +189,13 @@ const Enquiries: CollectionConfig = {
     },
 
     {
+      name: "consent",
+      label: "Contact Consent",
+      type: "checkbox",
+      defaultValue: false,
+    },
+
+    {
       name: "status",
       type: "select",
       defaultValue: "new",

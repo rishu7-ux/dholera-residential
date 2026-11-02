@@ -5,7 +5,17 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { getEnabledSMTPConfiguration, getPayloadSMTPConfiguration } from "../../lib/crm/smtp-email-config.ts";
-import { createPayloadSMTPAdapter } from "../../lib/crm/smtp-email-adapter.ts";
+import { createPayloadSMTPAdapter, getConfiguredPayloadEmailAdapter } from "../../lib/crm/smtp-email-adapter.ts";
+
+test("disabled SMTP rejects delivery without selecting Payload's console adapter", async () => {
+  const email = getConfiguredPayloadEmailAdapter({ NOIDA_SMTP_DELIVERY_ENABLED: "0" })({ payload: {} as never });
+  assert.equal(email.name, "noida-email-disabled");
+  await assert.rejects(
+    email.sendEmail({ to: "staff@example.invalid", subject: "Private reset", html: "<p>Secret token</p>" }),
+    /^Error: Email delivery is disabled\.$/,
+  );
+  assert.equal(getConfiguredPayloadEmailAdapter({})({ payload: {} as never }).name, "noida-email-disabled");
+});
 
 test("SMTP configuration is absent until the owner configures a sender and host", () => {
   assert.equal(getPayloadSMTPConfiguration({}), undefined);

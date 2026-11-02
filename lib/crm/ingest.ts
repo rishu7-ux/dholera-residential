@@ -2,12 +2,13 @@ import { randomUUID } from "node:crypto";
 import mongoose from "mongoose";
 
 import connectDB from "../mongodb";
+import { assignmentSource, queueAssignmentNotification } from "./assignment-notification";
 
 export type CentralLeadInput = {
   name: string;
   email?: string;
   phone: string;
-  website: "omana-projects" | "dholera-estate-1" | "dholera-estate-2" | "dholeraestates" | "dholeraindustrial";
+  website: "omana-projects" | "dholera-residential" | "dholera-estate-1" | "dholera-estate-2" | "dholeraestates" | "dholeraindustrial";
   leadType: "enquiry" | "contact" | "google-ads" | "chatbot";
   source: string;
   project?: string;
@@ -26,6 +27,7 @@ const COUNTER_KEY = "noida-shared-lead-round-robin";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const LEGACY_COLLECTIONS: Record<CentralLeadInput["website"], Partial<Record<CentralLeadInput["leadType"], string>>> = {
+  "dholera-residential": { enquiry: "enquiries", contact: "contact-messages" },
   "dholera-estate-1": { enquiry: "estate1-enquiries", contact: "estate1-contact-messages" },
   "dholera-estate-2": { enquiry: "estate2-enquiries", contact: "estate2-contact-messages" },
   dholeraestates: { enquiry: "dholera-estates-enquiries", contact: "dholera-estates-contact-messages" },
@@ -134,7 +136,7 @@ async function ingestCentralLeadInternal(input: CentralLeadInput, testHooks: Ing
   await connectDB();
   const db = mongoose.connection.db;
   if (!db) throw new Error("CRM database is unavailable");
-  if (legacy) await assertAtomicIndexes(db);
+  await assertAtomicIndexes(db);
 
   const idempotencyKey = input.idempotencyKey && UUID_PATTERN.test(input.idempotencyKey)
     ? input.idempotencyKey
@@ -229,6 +231,14 @@ async function ingestCentralLeadInternal(input: CentralLeadInput, testHooks: Ing
           details: { sequence, mode: "automatic-round-robin" }, createdAt: now, updatedAt: now,
         }] : []),
       ], { session });
+      if (salesperson && process.env.NOIDA_ASSIGNMENT_EMAIL_ENABLED === "1") {
+        await queueAssignmentNotification(db, session, {
+          lead: leadId,
+          salesperson: salesperson._id,
+          source: assignmentSource(input.website, input.leadType, input.source),
+          assignedAt: now,
+        });
+      }
       result = { id: String(leadId), duplicate: false, assigned: Boolean(salesperson), ...(legacyId ? { legacyId: String(legacyId) } : {}) };
     });
     if (!result) throw new Error("CRM lead transaction did not complete");
@@ -244,8 +254,8 @@ async function ingestCentralLeadInternal(input: CentralLeadInput, testHooks: Ing
     // turn a committed lead into a retryable HTTP error.
     try {
       await session.endSession();
-    } catch (error) {
-      console.error("CRM session cleanup failed", error);
+    } catch {
+      console.error("CRM session cleanup failed");
     }
   }
 }

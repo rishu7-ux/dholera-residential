@@ -77,7 +77,7 @@ test("all five TEST lead routes retain authentication and central CRM ingestion 
   assert.equal(NOIDA_LEAD_CAPTURE_ROUTES.length, 5);
   for (const integration of NOIDA_LEAD_CAPTURE_ROUTES) {
     const source = readFileSync(resolve(integration.route), "utf8");
-    assert.match(source, /ingestCentralLead/);
+    assert.match(source, /ingest(?:CentralLead|LeadWithLegacy)/);
     assert.ok(source.includes(integration.secret));
     assert.ok(source.includes(integration.website));
     assert.match(source, /idempotency/i);

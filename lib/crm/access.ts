@@ -22,6 +22,13 @@ export const authenticated: Access = ({ req }) => Boolean(req.user);
 export const superAdminOnly: Access = ({ req }) => isSuperAdmin(req.user as CrmUser);
 export const crmContentHidden = ({ user }: { user: CrmUser | null | undefined }) => !isSuperAdmin(user);
 export const isCrmRole = (role?: string | null) => role === "team-leader" || role === "salesperson";
+
+export function noidaDashboardAccess(user: CrmUser | null | undefined, officeId?: string | number): "allowed" | "setup-required" | "denied" {
+  if (!user) return "denied";
+  if (isSuperAdmin(user)) return officeId == null ? "setup-required" : "allowed";
+  if (!isCrmRole(user.role)) return "denied";
+  return officeId != null && relationshipId(user.office) === String(officeId) ? "allowed" : "denied";
+}
 export const legacyLeadAdminAccess = {
   create: superAdminOnly,
   read: superAdminOnly,

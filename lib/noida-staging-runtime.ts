@@ -1,3 +1,7 @@
+import { totalmem } from "node:os";
+
+import { resolveNoidaDisposableLocalMongoUri } from "./noida-disposable-local-target";
+
 const STAGING_PROJECT_ID = "prj_Xs3h7xDAvKP59ohOmeWd4Ht2wxlj";
 const STAGING_HOST = "cluster0.zshxfui.mongodb.net";
 const STAGING_DATABASE = "omana-phase5-crm-stage-20261017a";
@@ -11,6 +15,9 @@ export function prepareNoidaLocalStagingEnvironment(env: StagingEnvironment): St
   if (env.NOIDA_LOCAL_STAGING_MODE !== "1") {
     throw new Error("Noida local staging mode must be explicitly enabled");
   }
+  if (env.NODE_OPTIONS !== undefined || env.__NEXT_DEV_SERVER !== undefined || env.NEXT_PRIVATE_WORKER !== undefined) {
+    throw new Error("Noida local staging launcher refuses caller-supplied worker options");
+  }
   if (env.NODE_ENV !== undefined && env.NODE_ENV !== "development") {
     throw new Error("Noida local staging cannot run outside development mode");
   }
@@ -20,6 +27,9 @@ export function prepareNoidaLocalStagingEnvironment(env: StagingEnvironment): St
 }
 
 export function resolveNoidaStagingMongoUri(env: StagingEnvironment): string | undefined {
+  if (env.NOIDA_DISPOSABLE_LOCAL_MODE !== undefined || env.NOIDA_DISPOSABLE_LOCAL_BIND !== undefined) {
+    return resolveNoidaDisposableLocalMongoUri(env);
+  }
   if (env.NOIDA_LOCAL_STAGING_MODE !== undefined) {
     if (env.NOIDA_LOCAL_STAGING_MODE !== "1") {
       throw new Error("Noida local staging mode must be 1");
@@ -37,13 +47,14 @@ export function resolveNoidaStagingMongoUri(env: StagingEnvironment): string | u
     }
     if (
       env.PAYLOAD_DROP_DATABASE !== undefined ||
+      env.NOIDA_ASSIGNMENT_EMAIL_ENABLED === "1" ||
       (env.NOIDA_SMTP_DELIVERY_ENABLED !== undefined && env.NOIDA_SMTP_DELIVERY_ENABLED !== "0") ||
       env.BLOB_READ_WRITE_TOKEN !== undefined ||
       env.OPENAI_API_KEY !== undefined ||
       env.QDRANT_URL !== undefined ||
       env.QDRANT_API_KEY !== undefined ||
       env.RAG_INDEX_SECRET !== undefined ||
-      env.NODE_OPTIONS !== undefined ||
+      (env.NODE_OPTIONS !== undefined && !hasVerifiedNextDevWorkerOptions(env)) ||
       env.NODE_PATH !== undefined ||
       Object.keys(env).some((key) => key.startsWith("SMTP_") || key.endsWith("_INGEST_SECRET"))
     ) {
@@ -76,12 +87,21 @@ export function resolveNoidaStagingMongoUri(env: StagingEnvironment): string | u
   if (mode !== "1" || projectId !== STAGING_PROJECT_ID) {
     throw new Error("Noida staging project identity is missing or invalid");
   }
-  if (deployedProjectId !== undefined && deployedProjectId !== STAGING_PROJECT_ID) {
-    throw new Error("Noida staging is attached to the wrong Vercel project");
+  if (env.VERCEL !== "1" || env.VERCEL_ENV !== "preview" || deployedProjectId !== STAGING_PROJECT_ID) {
+    throw new Error("Noida staging requires the approved Vercel Preview project identity");
   }
 
   validateStagingMongoUri(env);
   return env.MONGODB_URI;
+}
+
+function hasVerifiedNextDevWorkerOptions(env: StagingEnvironment): boolean {
+  // Next 16.4.1 next-dev.js adds these options when it forks its dev server.
+  // The launcher rejects all incoming NODE_OPTIONS before Next starts.
+  const heapMb = Math.floor(Math.floor(totalmem() / 1024 / 1024) * 0.5);
+  return env.__NEXT_DEV_SERVER === "1" &&
+    env.NEXT_PRIVATE_WORKER === "1" &&
+    env.NODE_OPTIONS === `--max-old-space-size=${heapMb} --enable-source-maps`;
 }
 
 function validateStagingMongoUri(env: StagingEnvironment): void {

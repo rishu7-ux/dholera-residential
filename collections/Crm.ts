@@ -108,6 +108,7 @@ export const CentralLeads: CollectionConfig = {
     { name: "phone", type: "text", required: true, access: { update: superAdminField } },
     { name: "website", type: "select", required: true, access: { update: superAdminField }, options: [
       { label: "Omana Projects", value: "omana-projects" },
+      { label: "Dholera Residential", value: "dholera-residential" },
       { label: "Dholera Estate 1", value: "dholera-estate-1" },
       { label: "Dholera Estate 2", value: "dholera-estate-2" },
       { label: "Dholera Estates", value: "dholeraestates" },

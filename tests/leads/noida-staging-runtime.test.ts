@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { totalmem } from "node:os";
 import test from "node:test";
 
 import {
@@ -8,11 +9,17 @@ import {
 
 const projectId = "prj_Xs3h7xDAvKP59ohOmeWd4Ht2wxlj";
 const uri = "mongodb+srv://noida_stage_app:synthetic-secret@cluster0.zshxfui.mongodb.net/omana-phase5-crm-stage-20261017a?authSource=admin&retryWrites=true&w=majority";
-const staging = { NOIDA_STAGING_MODE: "1", NOIDA_STAGING_PROJECT_ID: projectId, MONGODB_URI: uri };
+const staging = {
+  NOIDA_STAGING_MODE: "1",
+  NOIDA_STAGING_PROJECT_ID: projectId,
+  VERCEL: "1",
+  VERCEL_ENV: "preview",
+  VERCEL_PROJECT_ID: projectId,
+  MONGODB_URI: uri,
+};
 
 test("accepts only the approved staging project and TEST database identity", () => {
   assert.equal(resolveNoidaStagingMongoUri(staging), uri);
-  assert.equal(resolveNoidaStagingMongoUri({ ...staging, VERCEL: "1", VERCEL_PROJECT_ID: projectId }), uri);
   assert.equal(resolveNoidaStagingMongoUri({ MONGODB_URI: "existing-non-staging-value" }), "existing-non-staging-value");
 });
 
@@ -23,6 +30,10 @@ test("rejects incomplete or invalid staging activation", () => {
   assert.throws(() => resolveNoidaStagingMongoUri({ ...staging, NOIDA_STAGING_MODE: "0" }));
   assert.throws(() => resolveNoidaStagingMongoUri({ MONGODB_URI: uri, VERCEL: "1", VERCEL_PROJECT_ID: projectId }));
   assert.throws(() => resolveNoidaStagingMongoUri({ ...staging, VERCEL: "1", VERCEL_PROJECT_ID: "other" }));
+  assert.throws(() => resolveNoidaStagingMongoUri({ ...staging, VERCEL: undefined }));
+  assert.throws(() => resolveNoidaStagingMongoUri({ ...staging, VERCEL_ENV: undefined }));
+  assert.throws(() => resolveNoidaStagingMongoUri({ ...staging, VERCEL_ENV: "production" }));
+  assert.throws(() => resolveNoidaStagingMongoUri({ ...staging, VERCEL_PROJECT_ID: undefined }));
 });
 
 test("rejects other hosts, databases, users and missing credentials", () => {
@@ -58,6 +69,34 @@ test("local launcher prepares a loopback-only, development staging environment",
   assert.equal(prepared.NOIDA_LOCAL_STAGING_BIND, "127.0.0.1");
   assert.equal(resolveNoidaStagingMongoUri(prepared), localUri);
   assert.equal(input.NOIDA_LOCAL_STAGING_BIND, undefined);
+});
+
+test("local staging accepts only Next's exact internal development-worker options", () => {
+  const heapMb = Math.floor(Math.floor(totalmem() / 1024 / 1024) * 0.5);
+  const internal = {
+    ...local,
+    __NEXT_DEV_SERVER: "1",
+    NEXT_PRIVATE_WORKER: "1",
+    NODE_OPTIONS: `--max-old-space-size=${heapMb} --enable-source-maps`,
+  };
+  assert.equal(resolveNoidaStagingMongoUri(internal), localUri);
+  assert.throws(() => prepareNoidaLocalStagingEnvironment(internal));
+
+  for (const changed of [
+    { NODE_OPTIONS: "--require synthetic-module" },
+    { NODE_OPTIONS: `${internal.NODE_OPTIONS} --require synthetic-module` },
+    { NODE_OPTIONS: `${internal.NODE_OPTIONS} --import synthetic-module` },
+    { NODE_OPTIONS: `${internal.NODE_OPTIONS} --inspect=0.0.0.0:9229` },
+    { NODE_OPTIONS: "--enable-source-maps" },
+    { NODE_OPTIONS: `--max-old-space-size=${heapMb + 1} --enable-source-maps` },
+    { __NEXT_DEV_SERVER: undefined },
+    { NEXT_PRIVATE_WORKER: undefined },
+    { NEXT_PRIVATE_WORKER: "0" },
+    { SMTP_HOST: "mail.example.invalid" },
+    { NOIDA_ASSIGNMENT_EMAIL_ENABLED: "1" },
+    { MONGODB_URI: localUri.replace("cluster0.zshxfui.mongodb.net", "cluster0.other.mongodb.net") },
+  ]) assert.throws(() => resolveNoidaStagingMongoUri({ ...internal, ...changed }));
+  assert.throws(() => resolveNoidaStagingMongoUri({ ...local, NODE_OPTIONS: internal.NODE_OPTIONS }));
 });
 
 test("local staging rejects missing mode, production runtime and absent launcher identity", () => {

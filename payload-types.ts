@@ -236,7 +236,13 @@ export interface CentralLead {
   name: string;
   email?: string | null;
   phone: string;
-  website: 'omana-projects' | 'dholera-estate-1' | 'dholera-estate-2' | 'dholeraestates' | 'dholeraindustrial';
+  website:
+    | 'omana-projects'
+    | 'dholera-residential'
+    | 'dholera-estate-1'
+    | 'dholera-estate-2'
+    | 'dholeraestates'
+    | 'dholeraindustrial';
   leadType: 'enquiry' | 'contact' | 'google-ads' | 'chatbot';
   source: string;
   project?: string | null;
@@ -306,6 +312,7 @@ export interface Enquiry {
   property?: string | null;
   message?: string | null;
   source?: string | null;
+  consent?: boolean | null;
   status?: ('new' | 'contacted' | 'follow-up' | 'qualified' | 'closed') | null;
   updatedAt: string;
   createdAt: string;
@@ -1112,6 +1119,7 @@ export interface EnquiriesSelect<T extends boolean = true> {
   property?: T;
   message?: T;
   source?: T;
+  consent?: T;
   status?: T;
   updatedAt?: T;
   createdAt?: T;

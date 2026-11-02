@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+# Private local QA databases, backups, credentials, and evidence
+/.artifacts/
 
 # next.js
 /.next/

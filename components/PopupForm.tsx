@@ -70,6 +70,7 @@ const formSchema = z.object({
       /^[6-9]\d{9}$/,
       "Enter a valid 10-digit Indian mobile number"
     ),
+  consent: z.boolean().refine((value) => value === true, "Please agree before submitting"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -90,6 +91,7 @@ export default function PopupForm({
 
   const [serverError, setServerError] =
     useState("");
+  const [submissionKey, setSubmissionKey] = useState<string | null>(null);
 
   const modalOpen =
     open || autoOpen;
@@ -111,6 +113,7 @@ export default function PopupForm({
       name: "",
       email: "",
       phone: "",
+      consent: false,
     },
 
     mode: "onSubmit",
@@ -226,15 +229,8 @@ export default function PopupForm({
     try {
       setServerError("");
 
-      console.log(
-        "Submitting popup enquiry:",
-        {
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          property: propertyName,
-        }
-      );
+      const key = submissionKey ?? crypto.randomUUID();
+      setSubmissionKey(key);
 
       /* =============================================
          POPUP → ENQUIRY API
@@ -248,6 +244,7 @@ export default function PopupForm({
           headers: {
             "Content-Type":
               "application/json",
+            "x-idempotency-key": key,
           },
 
           body: JSON.stringify({
@@ -266,6 +263,7 @@ export default function PopupForm({
             message: "",
 
             source: "popup-form",
+            consent: data.consent,
           }),
         }
       );
@@ -277,20 +275,12 @@ export default function PopupForm({
       const result =
         await response.json();
 
-      console.log(
-        "Popup API Response:",
-        result
-      );
 
       /* =============================================
          CHECK API RESPONSE
       ============================================= */
 
       if (!response.ok) {
-        console.error(
-          "❌ Enquiry API Error:",
-          result
-        );
 
         throw new Error(
           result?.message ||
@@ -302,10 +292,7 @@ export default function PopupForm({
          SUCCESS
       ============================================= */
 
-      console.log(
-        "✅ Popup enquiry saved to Payload:",
-        result
-      );
+      setSubmissionKey(null);
 
       /* =============================================
          RESET FORM
@@ -319,10 +306,6 @@ export default function PopupForm({
 
       setSubmitted(true);
     } catch (error) {
-      console.error(
-        "❌ Popup enquiry submit error:",
-        error
-      );
 
       const message =
         error instanceof Error
@@ -1105,6 +1088,12 @@ export default function PopupForm({
                       {/* =========================================
                           SERVER ERROR
                       ========================================= */}
+
+                      <label className="flex items-start gap-2 text-[11px] text-[#081A3A]">
+                        <input type="checkbox" {...register("consent")} className="mt-0.5 accent-[#FF7A00]" />
+                        I agree to be contacted about my property enquiry.
+                      </label>
+                      {errors.consent && <p className="text-[10px] text-red-500">{errors.consent.message}</p>}
 
                       {serverError && (
                         <motion.p
