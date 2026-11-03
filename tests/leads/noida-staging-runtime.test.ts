@@ -15,6 +15,7 @@ const staging = {
   VERCEL: "1",
   VERCEL_ENV: "preview",
   VERCEL_PROJECT_ID: projectId,
+  NOIDA_SMTP_DELIVERY_ENABLED: "0",
   MONGODB_URI: uri,
 };
 
@@ -34,6 +35,16 @@ test("rejects incomplete or invalid staging activation", () => {
   assert.throws(() => resolveNoidaStagingMongoUri({ ...staging, VERCEL_ENV: undefined }));
   assert.throws(() => resolveNoidaStagingMongoUri({ ...staging, VERCEL_ENV: "production" }));
   assert.throws(() => resolveNoidaStagingMongoUri({ ...staging, VERCEL_PROJECT_ID: undefined }));
+});
+
+test("Preview staging requires outbound SMTP delivery explicitly disabled", () => {
+  for (const setting of [undefined, "1", "invalid"]) {
+    assert.throws(() => resolveNoidaStagingMongoUri({
+      ...staging,
+      NOIDA_SMTP_DELIVERY_ENABLED: setting,
+    }));
+  }
+  assert.equal(resolveNoidaStagingMongoUri(staging), uri);
 });
 
 test("rejects other hosts, databases, users and missing credentials", () => {

@@ -90,6 +90,9 @@ export function resolveNoidaStagingMongoUri(env: StagingEnvironment): string | u
   if (env.VERCEL !== "1" || env.VERCEL_ENV !== "preview" || deployedProjectId !== STAGING_PROJECT_ID) {
     throw new Error("Noida staging requires the approved Vercel Preview project identity");
   }
+  if (env.NOIDA_SMTP_DELIVERY_ENABLED !== "0") {
+    throw new Error("Noida staging requires outbound SMTP delivery disabled");
+  }
 
   validateStagingMongoUri(env);
   return env.MONGODB_URI;
