@@ -4,6 +4,7 @@ import { getPayload } from "payload";
 import { z } from "zod";
 
 import config from "../../../payload.config";
+import { ingestCentralLead } from "../../../lib/crm/ingest";
 
 const enquirySchema = z.object({
   type: z.literal("enquiry"),
@@ -72,8 +73,9 @@ export async function POST(request: Request) {
     const payload = await getPayload({ config });
     const data = result.data;
 
+    let legacyId: string | number;
     if (data.type === "enquiry") {
-      await payload.create({
+      const created = await payload.create({
         collection: "industrial-enquiries",
         data: {
           name: data.name,
@@ -85,8 +87,9 @@ export async function POST(request: Request) {
           status: "new",
         },
       });
+      legacyId = created.id;
     } else {
-      await payload.create({
+      const created = await payload.create({
         collection: "industrial-contact-messages",
         data: {
           name: data.name,
@@ -100,7 +103,20 @@ export async function POST(request: Request) {
           status: "new",
         },
       });
+      legacyId = created.id;
     }
+
+    await ingestCentralLead({
+      name: data.name, email: data.email, phone: data.phone,
+      website: "dholeraindustrial", leadType: data.type, source: data.source,
+      project: data.type === "enquiry" ? data.property : data.propertyType,
+      message: data.type === "enquiry" ? data.message : data.comments,
+      budget: data.type === "contact" ? data.budget : undefined,
+      consent: data.type === "contact" ? data.consent : false,
+      idempotencyKey: request.headers.get("x-idempotency-key") || undefined,
+      legacyCollection: data.type === "enquiry" ? "industrial-enquiries" : "industrial-contact-messages",
+      legacyId,
+    });
 
     return Response.json({ success: true, message: "Lead saved successfully" }, { status: 201 });
   } catch (error) {

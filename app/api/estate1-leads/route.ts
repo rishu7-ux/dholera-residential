@@ -4,6 +4,7 @@ import { getPayload } from "payload";
 import { z } from "zod";
 
 import config from "../../../payload.config";
+import { ingestCentralLead } from "../../../lib/crm/ingest";
 
 const enquirySchema = z.object({
   type: z.literal("enquiry"),
@@ -45,10 +46,10 @@ export async function POST(request: Request) {
     if (!result.success) return Response.json({ success: false, message: "Invalid lead details" }, { status: 400 });
 
     const payload = await getPayload({ config });
+    let legacyId: string | number;
     if (result.data.type === "enquiry") {
-      await payload.create({
-        // Regenerate payload-types.ts with the project-supported Node runtime before deployment.
-        collection: "estate1-enquiries" as never,
+      const created = await payload.create({
+        collection: "estate1-enquiries",
         data: {
           name: result.data.name,
           email: result.data.email,
@@ -56,12 +57,12 @@ export async function POST(request: Request) {
           message: result.data.message,
           source: result.data.source,
           status: "new",
-        } as never,
+        },
       });
+      legacyId = String(created.id);
     } else {
-      await payload.create({
-        // Regenerate payload-types.ts with the project-supported Node runtime before deployment.
-        collection: "estate1-contact-messages" as never,
+      const created = await payload.create({
+        collection: "estate1-contact-messages",
         data: {
           name: result.data.name,
           email: result.data.email,
@@ -71,9 +72,22 @@ export async function POST(request: Request) {
           consent: result.data.consent,
           source: result.data.source,
           status: "new",
-        } as never,
+        },
       });
+      legacyId = String(created.id);
     }
+
+    await ingestCentralLead({
+      name: result.data.name, email: result.data.email, phone: result.data.phone,
+      website: "dholera-estate-1", leadType: result.data.type,
+      source: result.data.source, project: "Dholera Estate 1",
+      message: result.data.type === "enquiry" ? result.data.message : result.data.comments,
+      budget: result.data.type === "contact" ? result.data.budget : undefined,
+      consent: result.data.type === "contact" ? result.data.consent : false,
+      idempotencyKey: request.headers.get("x-idempotency-key") || undefined,
+      legacyCollection: result.data.type === "enquiry" ? "estate1-enquiries" : "estate1-contact-messages",
+      legacyId,
+    });
 
     return Response.json({ success: true, message: "Lead saved successfully" }, { status: 201 });
   } catch (error) {

@@ -68,6 +68,10 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
+    'crm-offices': CrmOffice;
+    'crm-teams': CrmTeam;
+    'central-leads': CentralLead;
+    'crm-activities': CrmActivity;
     enquiries: Enquiry;
     'contact-messages': ContactMessage;
     'estate1-enquiries': Estate1Enquiry;
@@ -98,6 +102,10 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
+    'crm-offices': CrmOfficesSelect<false> | CrmOfficesSelect<true>;
+    'crm-teams': CrmTeamsSelect<false> | CrmTeamsSelect<true>;
+    'central-leads': CentralLeadsSelect<false> | CentralLeadsSelect<true>;
+    'crm-activities': CrmActivitiesSelect<false> | CrmActivitiesSelect<true>;
     enquiries: EnquiriesSelect<false> | EnquiriesSelect<true>;
     'contact-messages': ContactMessagesSelect<false> | ContactMessagesSelect<true>;
     'estate1-enquiries': Estate1EnquiriesSelect<false> | Estate1EnquiriesSelect<true>;
@@ -166,6 +174,13 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: string;
+  role: 'super-admin' | 'team-leader' | 'salesperson';
+  name: string;
+  office?: (string | null) | CrmOffice;
+  active: boolean;
+  eligibleForAssignment: boolean;
+  rotationOrder?: number | null;
+  team?: (string | null) | CrmTeam;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -184,6 +199,100 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "crm-offices".
+ */
+export interface CrmOffice {
+  id: string;
+  name: string;
+  code: string;
+  active: boolean;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "crm-teams".
+ */
+export interface CrmTeam {
+  id: string;
+  name: string;
+  office: string | CrmOffice;
+  teamLeader: string | User;
+  salespeople?: (string | User)[] | null;
+  active: boolean;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "central-leads".
+ */
+export interface CentralLead {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone: string;
+  website: 'omana-projects' | 'dholera-estate-1' | 'dholera-estate-2' | 'dholeraestates' | 'dholeraindustrial';
+  leadType: 'enquiry' | 'contact' | 'google-ads' | 'chatbot';
+  source: string;
+  project?: string | null;
+  message?: string | null;
+  budget?: string | null;
+  page?: string | null;
+  consent: boolean;
+  consentRecordedAt?: string | null;
+  consentDisclosureVersion?: string | null;
+  idempotencyKey: string;
+  office: string | CrmOffice;
+  team?: (string | null) | CrmTeam;
+  assignedSalesperson?: (string | null) | User;
+  assignedAt?: string | null;
+  assignmentSequence?: number | null;
+  unassignedReason?: string | null;
+  legacyCollection?: string | null;
+  legacyId?: string | null;
+  status: 'new' | 'contacted' | 'follow-up' | 'qualified' | 'converted' | 'lost';
+  lastContactedAt?: string | null;
+  nextFollowUpAt?: string | null;
+  notes?: string | null;
+  attribution?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "crm-activities".
+ */
+export interface CrmActivity {
+  id: string;
+  lead: string | CentralLead;
+  office: string | CrmOffice;
+  team?: (string | null) | CrmTeam;
+  assignedSalesperson?: (string | null) | User;
+  actor?: (string | null) | User;
+  event: 'created' | 'assigned' | 'reassigned' | 'status-changed' | 'note-added' | 'follow-up-scheduled';
+  details?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -744,6 +853,22 @@ export interface PayloadLockedDocument {
         value: string | User;
       } | null)
     | ({
+        relationTo: 'crm-offices';
+        value: string | CrmOffice;
+      } | null)
+    | ({
+        relationTo: 'crm-teams';
+        value: string | CrmTeam;
+      } | null)
+    | ({
+        relationTo: 'central-leads';
+        value: string | CentralLead;
+      } | null)
+    | ({
+        relationTo: 'crm-activities';
+        value: string | CrmActivity;
+      } | null)
+    | ({
         relationTo: 'enquiries';
         value: string | Enquiry;
       } | null)
@@ -878,6 +1003,13 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  role?: T;
+  name?: T;
+  office?: T;
+  active?: T;
+  eligibleForAssignment?: T;
+  rotationOrder?: T;
+  team?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -894,6 +1026,79 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "crm-offices_select".
+ */
+export interface CrmOfficesSelect<T extends boolean = true> {
+  name?: T;
+  code?: T;
+  active?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "crm-teams_select".
+ */
+export interface CrmTeamsSelect<T extends boolean = true> {
+  name?: T;
+  office?: T;
+  teamLeader?: T;
+  salespeople?: T;
+  active?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "central-leads_select".
+ */
+export interface CentralLeadsSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  phone?: T;
+  website?: T;
+  leadType?: T;
+  source?: T;
+  project?: T;
+  message?: T;
+  budget?: T;
+  page?: T;
+  consent?: T;
+  consentRecordedAt?: T;
+  consentDisclosureVersion?: T;
+  idempotencyKey?: T;
+  office?: T;
+  team?: T;
+  assignedSalesperson?: T;
+  assignedAt?: T;
+  assignmentSequence?: T;
+  unassignedReason?: T;
+  legacyCollection?: T;
+  legacyId?: T;
+  status?: T;
+  lastContactedAt?: T;
+  nextFollowUpAt?: T;
+  notes?: T;
+  attribution?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "crm-activities_select".
+ */
+export interface CrmActivitiesSelect<T extends boolean = true> {
+  lead?: T;
+  office?: T;
+  assignedSalesperson?: T;
+  actor?: T;
+  event?: T;
+  details?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

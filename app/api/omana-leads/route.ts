@@ -4,11 +4,8 @@ import { getPayload } from "payload";
 import { z } from "zod";
 
 import config from "../../../payload.config";
+import { ingestCentralLead } from "../../../lib/crm/ingest";
 import { qualifyLead } from "../../../lib/leads/qualification";
-import {
-  currentAssignmentCounterScope,
-  getOrCreateSalespersonAssignment,
-} from "../../../lib/leads/salespersonAssignment";
 
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
 const MAX_BODY_CHARACTERS = 32_768;
@@ -146,34 +143,6 @@ function isAuthorized(request: Request) {
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
-async function assignChatbotLead(
-  payload: Awaited<ReturnType<typeof getPayload>>,
-  leadId: string | number,
-) {
-  try {
-    const assignment = await getOrCreateSalespersonAssignment(
-      payload,
-      leadId,
-      currentAssignmentCounterScope(),
-    );
-    if (!assignment) return;
-
-    await payload.update({
-      collection: "omana-enquiries",
-      id: leadId,
-      context: { automaticAssignment: true },
-      data: {
-        assignedSalesperson: assignment.salespersonId,
-        assignedAt: assignment.assignedAt,
-        assignmentSequence: assignment.sequence,
-        assignmentMode: "automatic",
-      },
-    });
-  } catch (error) {
-    console.error("Automatic salesperson assignment failed", error);
-  }
-}
-
 export async function POST(request: Request) {
   if (!isAuthorized(request)) {
     return Response.json(
@@ -216,6 +185,43 @@ export async function POST(request: Request) {
   try {
     const payload = await getPayload({ config });
     const data = result.data;
+
+    await ingestCentralLead({
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      website: "omana-projects",
+      leadType:
+        data.type === "ai-chatbot-enquiry"
+          ? "chatbot"
+          : data.type === "google-ads-enquiry"
+            ? "google-ads"
+            : data.type,
+      source: data.source,
+      project: data.selectedProject,
+      message: data.type === "ai-chatbot-enquiry" ? data.requirement : data.message,
+      budget: data.type === "ai-chatbot-enquiry" ? data.budget : undefined,
+      page: data.page,
+      consent: data.consent,
+      idempotencyKey:
+        data.type === "ai-chatbot-enquiry"
+          ? data.idempotencyKey
+          : request.headers.get("x-idempotency-key") || undefined,
+      attribution:
+        data.type === "ai-chatbot-enquiry" || data.type === "google-ads-enquiry"
+          ? {
+              utmSource: data.utmSource,
+              utmMedium: data.utmMedium,
+              utmCampaign: data.utmCampaign,
+              utmTerm: data.utmTerm,
+              utmContent: data.utmContent,
+              gclid: data.gclid,
+              gbraid: data.gbraid,
+              wbraid: data.wbraid,
+              referrer: data.referrer,
+            }
+          : undefined,
+    });
 
     if (data.type === "ai-chatbot-enquiry") {
       const normalizedPhone = data.phone;
@@ -267,12 +273,6 @@ export async function POST(request: Request) {
               qualificationMode: "automatic",
             },
           });
-        }
-        if (
-          !existingLead.assignedSalesperson &&
-          existingLead.assignmentMode !== "manual"
-        ) {
-          await assignChatbotLead(payload, existingLead.id);
         }
         return Response.json(
           { success: true, duplicate: true },
@@ -329,7 +329,6 @@ export async function POST(request: Request) {
           qualificationMode: "automatic",
         },
       });
-      await assignChatbotLead(payload, createdLead.id);
     } else if (data.type === "enquiry") {
       await payload.create({
         collection: "omana-enquiries",
