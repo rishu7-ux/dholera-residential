@@ -285,6 +285,7 @@ export interface CrmActivity {
   id: string;
   lead: string | CentralLead;
   office: string | CrmOffice;
+  team?: (string | null) | CrmTeam;
   assignedSalesperson?: (string | null) | User;
   actor?: (string | null) | User;
   event: 'created' | 'assigned' | 'reassigned' | 'status-changed' | 'note-added' | 'follow-up-scheduled';
@@ -1101,6 +1102,7 @@ export interface CentralLeadsSelect<T extends boolean = true> {
 export interface CrmActivitiesSelect<T extends boolean = true> {
   lead?: T;
   office?: T;
+  team?: T;
   assignedSalesperson?: T;
   actor?: T;
   event?: T;

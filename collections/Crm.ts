@@ -1,6 +1,6 @@
 import type { CollectionConfig } from "payload";
 
-import { crmContentHidden, crmLeadRead, crmLeadUpdate, crmOfficeRead, crmTeamRead, superAdminField, superAdminOnly } from "../lib/crm/access";
+import { crmActivityRead, crmContentHidden, crmLeadRead, crmLeadUpdate, crmOfficeRead, crmTeamRead, superAdminField, superAdminOnly } from "../lib/crm/access";
 import { validateLeadOperationUpdate } from "../lib/crm/lead-operations";
 
 export const CrmOffices: CollectionConfig = {
@@ -63,6 +63,14 @@ export const CentralLeads: CollectionConfig = {
       if (operation !== "update") return doc;
       const actor = req.user?.id;
       const events: Array<{ event: "status-changed" | "note-added" | "follow-up-scheduled" | "assigned" | "reassigned"; details: Record<string, unknown> }> = [];
+      const relationKey = (value: unknown): string | null => {
+        if (value && typeof value === "object") {
+          const relation = value as { id?: unknown; toHexString?: () => string };
+          if (typeof relation.toHexString === "function") return relation.toHexString();
+          if (relation.id !== undefined) return relationKey(relation.id);
+        }
+        return value == null ? null : String(value);
+      };
       if (doc.status !== previousDoc?.status) {
         events.push({ event: "status-changed", details: { from: previousDoc?.status || "new", to: doc.status } });
       }
@@ -72,9 +80,6 @@ export const CentralLeads: CollectionConfig = {
       if (doc.nextFollowUpAt !== previousDoc?.nextFollowUpAt) {
         events.push({ event: "follow-up-scheduled", details: { from: previousDoc?.nextFollowUpAt || null, to: doc.nextFollowUpAt || null } });
       }
-      const relationKey = (value: unknown) => value && typeof value === "object" && "id" in value
-        ? String((value as { id: string | number }).id)
-        : value == null ? "" : String(value);
       if (relationKey(doc.assignedSalesperson) !== relationKey(previousDoc?.assignedSalesperson)) {
         events.push({ event: previousDoc?.assignedSalesperson ? "reassigned" : "assigned", details: {
           from: relationKey(previousDoc?.assignedSalesperson) || null,
@@ -82,7 +87,8 @@ export const CentralLeads: CollectionConfig = {
           mode: "manual",
         } });
       }
-      if (events.length && doc.office) {
+      const officeId = relationKey(doc.office);
+      if (events.length && officeId) {
         for (const item of events) {
           await req.payload.create({
             collection: "crm-activities",
@@ -90,8 +96,9 @@ export const CentralLeads: CollectionConfig = {
             req,
             data: {
               lead: doc.id,
-              office: typeof doc.office === "object" ? doc.office.id : doc.office,
-              assignedSalesperson: typeof doc.assignedSalesperson === "object" ? doc.assignedSalesperson.id : doc.assignedSalesperson,
+              office: officeId,
+              team: relationKey(doc.team),
+              assignedSalesperson: relationKey(doc.assignedSalesperson),
               actor,
               event: item.event,
               details: item.details,
@@ -150,10 +157,11 @@ export const CrmActivities: CollectionConfig = {
   slug: "crm-activities",
   labels: { singular: "CRM Activity", plural: "CRM Activities" },
   admin: { useAsTitle: "event", group: "Sales CRM", defaultColumns: ["lead", "event", "actor", "createdAt"] },
-  access: { create: () => false, read: crmLeadRead, update: () => false, delete: superAdminOnly },
+  access: { create: () => false, read: crmActivityRead, update: () => false, delete: superAdminOnly },
   fields: [
     { name: "lead", type: "relationship", relationTo: "central-leads", required: true, index: true },
     { name: "office", type: "relationship", relationTo: "crm-offices", required: true, index: true },
+    { name: "team", type: "relationship", relationTo: "crm-teams", index: true },
     { name: "assignedSalesperson", type: "relationship", relationTo: "users", index: true },
     { name: "actor", type: "relationship", relationTo: "users" },
     { name: "event", type: "select", required: true, options: [

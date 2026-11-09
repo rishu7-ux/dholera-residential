@@ -28,7 +28,7 @@ import { Estate1Blogs } from "./collections/Estate1Blogs.ts";
 import { OmanaBlogs } from "./collections/OmanaBlogs.ts";
 import { AIKnowledge } from "./collections/AIKnowledge.ts";
 import { CentralLeads, CrmActivities, CrmOffices, CrmTeams } from "./collections/Crm.ts";
-import { crmContentHidden, isSuperAdmin, legacyLeadAdminAccess, superAdminField, superAdminOnly } from "./lib/crm/access";
+import { crmContentHidden, crmUserRead, isSuperAdmin, legacyLeadAdminAccess, superAdminField, superAdminOnly } from "./lib/crm/access";
 import { createPasswordSetupEmail } from "./lib/crm/password-setup-email";
 import { getConfiguredPayloadEmailAdapter } from "./lib/crm/smtp-email-adapter";
 import { handleStaffInvitation } from "./lib/crm/staff-invitation";
@@ -82,16 +82,7 @@ export const Users: CollectionConfig = {
 
   access: {
     create: superAdminOnly,
-    read: ({ req }) => {
-      if (!req.user) return false;
-      const user = req.user as typeof req.user & { role?: string; office?: string | number | { id?: string | number } };
-      if (!user.role || user.role === "super-admin") return true;
-      if (user.role === "team-leader" && user.office) {
-        const office = typeof user.office === "object" ? user.office.id : user.office;
-        return { office: { equals: office } } as import("payload").Where;
-      }
-      return { id: { equals: user.id } } as import("payload").Where;
-    },
+    read: crmUserRead,
     update: ({ req }) => {
       const user = req.user as (typeof req.user & { role?: string }) | null;
       if (!user) return false;

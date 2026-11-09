@@ -9,6 +9,7 @@ type CrmUser = {
   role?: string;
   name?: string | null;
   office?: string | number | { id?: string | number } | null;
+  team?: string | number | { id?: string | number } | null;
 };
 type CrmActivity = {
   id: string | number;
@@ -110,6 +111,7 @@ export default async function CrmDashboard({
               and: [
                 { office: { equals: office.id } },
                 { leadType: { equals: "contact" } },
+                ...(team ? [{ team: { equals: team.id } }] : []),
               ],
             },
             overrideAccess: false,
@@ -126,7 +128,14 @@ export default async function CrmDashboard({
               { assignedSalesperson: { equals: user.id } },
             ],
           }
-        : { office: { equals: office.id } },
+        : user.role === "team-leader" && team
+          ? {
+              and: [
+                { office: { equals: office.id } },
+                { team: { equals: team.id } },
+              ],
+            }
+          : { office: { equals: office.id } },
     limit: 8,
     sort: "-createdAt",
     depth: 1,

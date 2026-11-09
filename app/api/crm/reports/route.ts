@@ -2,6 +2,7 @@ import { getPayload, type Where } from "payload";
 import config from "../../../../payload.config";
 import { buildCrmReport, parseReportOptions, reportWindow, type ReportLead } from "../../../../lib/crm/report-core";
 import { reportCSV, reportPDF, reportXLSX } from "../../../../lib/crm/report-export";
+import { isSuperAdmin, relationshipId } from "../../../../lib/crm/access";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -28,8 +29,10 @@ export async function GET(request: Request) {
     const payload = await getPayload({ config });
     const { user } = await payload.auth({ headers: request.headers });
     if (!user) return fail(401, "Authentication required");
-    if (!["super-admin", "team-leader", "salesperson"].includes(String(user.role))) return fail(403, "CRM access denied");
+    if (!isSuperAdmin(user) && !["team-leader", "salesperson"].includes(String(user.role))) return fail(403, "CRM access denied");
     if (user.role === "salesperson" && options.salesperson && options.salesperson !== String(user.id)) return fail(403, "Salesperson filter denied");
+    const teamId = relationshipId((user as typeof user & { team?: unknown }).team);
+    if (user.role === "team-leader" && !teamId) return fail(403, "Noida team access denied");
 
     const officeResult = await payload.find({
       collection: "crm-offices",
@@ -44,6 +47,7 @@ export async function GET(request: Request) {
 
     const window = reportWindow(options);
     const predicates: Where[] = [{ office: { equals: office.id } }];
+    if (user.role === "team-leader") predicates.push({ team: { equals: teamId } });
     if (window.start) predicates.push({ createdAt: { greater_than_equal: window.start } });
     if (window.endExclusive) predicates.push({ createdAt: { less_than: window.endExclusive } });
     if (options.status) predicates.push({ status: { equals: options.status } });
@@ -72,7 +76,9 @@ export async function GET(request: Request) {
     for (let page = 1; ; page++) {
       const batch = await payload.find({
         collection: "users",
-        where: { office: { equals: office.id } },
+        where: user.role === "team-leader"
+          ? { and: [{ office: { equals: office.id } }, { team: { equals: teamId } }] }
+          : { office: { equals: office.id } },
         page,
         limit: 250,
         depth: 0,

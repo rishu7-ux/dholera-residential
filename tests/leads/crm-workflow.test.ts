@@ -1,20 +1,84 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { CentralLeads } from "../../collections/Crm";
-import { crmLeadRead, crmLeadUpdate } from "../../lib/crm/access";
+import { crmActivityRead, crmLeadRead, crmLeadUpdate, crmTeamRead, crmUserRead } from "../../lib/crm/access";
 import { validateLeadOperationUpdate } from "../../lib/crm/lead-operations";
 import { buildCrmReport, type ReportOptions } from "../../lib/crm/report-core";
 
-const req = (user: object | null) => ({ req: { user } }) as never;
+const assignedTeam = {
+  id: "team-a",
+  office: "office-a",
+  teamLeader: "leader-a",
+  active: true,
+};
 
-test("lead reads and updates stay within salesperson assignment and Team Leader office", () => {
-  assert.equal(crmLeadUpdate(req({ id: "admin", role: "super-admin" })), true);
-  assert.deepEqual(crmLeadRead(req({ id: "person-1", role: "salesperson", office: "office-a" })), { assignedSalesperson: { equals: "person-1" } });
-  assert.deepEqual(crmLeadUpdate(req({ id: "person-1", role: "salesperson", office: "office-a" })), { assignedSalesperson: { equals: "person-1" } });
-  assert.deepEqual(crmLeadRead(req({ id: "leader", role: "team-leader", office: "office-a" })), { office: { equals: "office-a" } });
-  assert.deepEqual(crmLeadUpdate(req({ id: "leader", role: "team-leader", office: "office-a" })), { office: { equals: "office-a" } });
-  assert.equal(crmLeadRead(req({ id: "leader", role: "team-leader" })), false);
-  assert.equal(crmLeadUpdate(req(null)), false);
+const req = (user: object | null, team: typeof assignedTeam | null = assignedTeam) => ({
+  req: {
+    user,
+    payload: {
+      find: async () => {
+        const member = user as { id?: string; role?: string; office?: string; team?: string } | null;
+        const isAssignedTeam = Boolean(
+          team &&
+            member?.role === "team-leader" &&
+            team.id === member.team &&
+            team.office === member.office &&
+            team.teamLeader === member.id &&
+            team.active,
+        );
+        return { docs: isAssignedTeam ? [team] : [] };
+      },
+    },
+  },
+}) as never;
+
+test("Super Admin sees all CRM leads while anonymous and unknown roles fail closed", async () => {
+  assert.equal(await crmLeadRead(req({ id: "admin", role: "super-admin" })), true);
+  assert.equal(await crmLeadUpdate(req({ id: "admin", role: "super-admin" })), true);
+  assert.equal(await crmLeadRead(req(null)), false);
+  assert.equal(await crmLeadUpdate(req({ id: "visitor", role: "visitor" })), false);
+});
+
+test("Salesperson reads and updates only leads assigned to their own user ID", async () => {
+  const salesperson = { id: "person-1", role: "salesperson", office: "office-a", team: "team-a" };
+  assert.deepEqual(await crmLeadRead(req(salesperson)), { assignedSalesperson: { equals: "person-1" } });
+  assert.deepEqual(await crmLeadUpdate(req(salesperson)), { assignedSalesperson: { equals: "person-1" } });
+});
+
+test("Team Leader reads and updates only the currently assigned active team", async () => {
+  const leader = { id: "leader-a", role: "team-leader", office: "office-a", team: "team-a" };
+  const expected = { and: [{ office: { equals: "office-a" } }, { team: { equals: "team-a" } }] };
+  assert.deepEqual(await crmLeadRead(req(leader)), expected);
+  assert.deepEqual(await crmLeadUpdate(req(leader)), expected);
+  assert.equal(await crmLeadRead(req({ ...leader, team: "team-b" }, null)), false, "stale team claim is denied");
+  assert.equal(await crmLeadRead(req({ ...leader, office: "office-b" }, null)), false, "team assigned to another office is denied");
+  assert.equal(await crmLeadRead(req({ ...leader, team: undefined })), false, "unassigned Team Leader is denied");
+  assert.equal(await crmLeadRead(req(leader, { ...assignedTeam, active: false })), false, "inactive team is denied");
+  assert.equal(await crmLeadRead(req(leader, { ...assignedTeam, teamLeader: "another-leader" })), false, "team reassigned to another leader is denied");
+});
+
+test("Team Leader reads only assigned team, office, and active status in related collections", async () => {
+  const leader = { id: "leader-a", role: "team-leader", office: "office-a", team: "team-a" };
+  const teamScope = await crmTeamRead(req(leader));
+  assert.deepEqual(teamScope, {
+    and: [{ office: { equals: "office-a" } }, { team: { equals: "team-a" } }],
+  });
+  assert.deepEqual(await crmActivityRead(req(leader)), {
+    and: [{ office: { equals: "office-a" } }, { team: { equals: "team-a" } }],
+  });
+  assert.deepEqual(await crmUserRead(req(leader)), {
+    and: [
+      { and: [{ office: { equals: "office-a" } }, { team: { equals: "team-a" } }] },
+      {
+        or: [
+          { id: { equals: "leader-a" } },
+          { and: [{ role: { equals: "salesperson" } }, { team: { equals: "team-a" } }] },
+        ],
+      },
+    ],
+  });
+  assert.equal(await crmTeamRead(req({ id: "person-1", role: "salesperson", office: "office-a", team: "team-a" })), false);
+  assert.deepEqual(await crmUserRead(req({ id: "person-1", role: "salesperson", office: "office-a", team: "team-a" })), { id: { equals: "person-1" } });
 });
 
 test("operational update validation rejects bad status, unsafe notes and invalid follow-up schedules", () => {
