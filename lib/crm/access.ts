@@ -84,8 +84,17 @@ export const crmTeamRead: Access = ({ req }) => {
   const user = req.user as CrmUser | null;
   if (!user) return false;
   if (isSuperAdmin(user)) return true;
-  if (user.role !== "team-leader" || !user.id) return false;
-  return assignedTeamScope(user, req.payload);
+  const office = relationshipId(user.office);
+  const team = relationshipId(user.team);
+  if (user.role !== "team-leader" || !user.id || !office || !team) return false;
+  return {
+    and: [
+      { id: { equals: team } },
+      { office: { equals: office } },
+      { teamLeader: { equals: String(user.id) } },
+      { active: { equals: true } },
+    ],
+  } as Where;
 };
 
 export const crmUserRead: Access = async ({ req }) => {

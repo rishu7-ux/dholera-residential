@@ -61,8 +61,14 @@ test("Team Leader reads only assigned team, office, and active status in related
   const leader = { id: "leader-a", role: "team-leader", office: "office-a", team: "team-a" };
   const teamScope = await crmTeamRead(req(leader));
   assert.deepEqual(teamScope, {
-    and: [{ office: { equals: "office-a" } }, { team: { equals: "team-a" } }],
+    and: [
+      { id: { equals: "team-a" } },
+      { office: { equals: "office-a" } },
+      { teamLeader: { equals: "leader-a" } },
+      { active: { equals: true } },
+    ],
   });
+  assert.equal(await crmTeamRead(req({ ...leader, team: undefined })), false);
   assert.deepEqual(await crmActivityRead(req(leader)), {
     and: [{ office: { equals: "office-a" } }, { team: { equals: "team-a" } }],
   });
