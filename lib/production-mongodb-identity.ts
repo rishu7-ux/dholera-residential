@@ -57,6 +57,33 @@ function parseIdentity(env: MongoIdentityEnvironment): {
   };
 }
 
+// Next.js Node POST requests carry a stream even when no bytes were sent.
+// Read only until EOF or the first nonempty chunk, with a bounded deadline.
+async function hasZeroByteBody(request: Request): Promise<boolean> {
+  if (request.body === null) return true;
+  let reader: ReadableStreamDefaultReader<Uint8Array>;
+  try { reader = request.body.getReader(); } catch { return false; }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      (async () => {
+        for (let count = 0; count < 8; count++) {
+          const { done, value } = await reader.read();
+          if (done) return true;
+          if (value.byteLength > 0) return false;
+        }
+        return false;
+      })(),
+      new Promise<boolean>((resolve) => { timer = setTimeout(() => resolve(false), 1000); }),
+    ]);
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+    void reader.cancel().catch(() => {});
+  }
+}
+
 export function createProductionMongoIdentityHandler(env: MongoIdentityEnvironment, now: () => number = Date.now) {
   return async function POST(request: Request): Promise<Response> {
     const expiry = env.MONGODB_IDENTITY_DIAGNOSTIC_EXPIRES_AT;
@@ -71,10 +98,14 @@ export function createProductionMongoIdentityHandler(env: MongoIdentityEnvironme
       !Number.isFinite(remainingMs) ||
       remainingMs <= 0 ||
       remainingMs > MAX_TOKEN_LIFETIME_MS ||
-      request.body !== null ||
+      request.method !== "POST" ||
       (request.headers.get("content-length") !== null && request.headers.get("content-length") !== "0") ||
       !authorized(request, env.MONGODB_IDENTITY_DIAGNOSTIC_TOKEN)
     ) {
+      return response(404, { error: "Not found" });
+    }
+
+    if (!(await hasZeroByteBody(request)) || now() >= expiresAt) {
       return response(404, { error: "Not found" });
     }
 
