@@ -1,0 +1,660 @@
+/* =========================================
+   DHOLERA PAYLOAD ADMIN
+========================================= */
+
+:root {
+  --dholera-orange: #ff7a00;
+  --dholera-orange-light: #ff9638;
+  --dholera-orange-soft: #fff4ea;
+  --dholera-cream: #fff8f2;
+  --dholera-border: #ffd9b8;
+  --dholera-text: #34261d;
+  --dholera-muted: #79695d;
+}
+
+/* =========================================
+   ADMIN BACKGROUND
+========================================= */
+
+body {
+  background: #fff8f2;
+}
+
+/* =========================================
+   SIDEBAR
+========================================= */
+
+.nav {
+  border-right: 1px solid #ffd9b8;
+}
+
+.nav a {
+  border-radius: 10px;
+  transition:
+    color 0.25s ease,
+    transform 0.25s ease,
+    background 0.25s ease;
+}
+
+.nav a:hover {
+  color: #ff7a00;
+  transform: translateX(3px);
+}
+
+/* =========================================
+   BUTTONS
+========================================= */
+
+.btn--style-primary {
+  background: #ff7a00 !important;
+  border-color: #ff7a00 !important;
+  border-radius: 10px !important;
+}
+
+.btn--style-primary:hover {
+  background: #ff9638 !important;
+  border-color: #ff9638 !important;
+}
+
+/* =========================================
+   INPUTS
+========================================= */
+
+input,
+textarea,
+select {
+  border-radius: 10px !important;
+}
+
+/* =========================================
+   PAYLOAD CARDS
+========================================= */
+
+.card {
+  border-radius: 16px;
+}
+
+/* =========================================
+   TABLES
+========================================= */
+
+table {
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+/* =========================================
+   SCROLLBAR
+========================================= */
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ff9638;
+  border-radius: 20px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ff7a00;
+}
+
+/* =========================================================
+   DHOLERA CUSTOM DASHBOARD
+========================================================= */
+
+.dholera-dashboard {
+  padding-bottom: 40px;
+}
+
+/* =========================================================
+   HERO
+========================================================= */
+
+.dholera-dashboard__hero {
+  position: relative;
+  overflow: hidden;
+
+  margin-bottom: 28px;
+  padding: 30px 32px;
+
+  border-radius: 22px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #ff7a00 0%,
+      #ff9638 100%
+    );
+
+  box-shadow:
+    0 18px 45px rgba(255, 122, 0, 0.18);
+
+  color: #ffffff;
+}
+
+.dholera-dashboard__hero::after {
+  position: absolute;
+  top: -70px;
+  right: -60px;
+
+  width: 190px;
+  height: 190px;
+
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.09);
+
+  content: "";
+}
+
+.dholera-dashboard__hero-content {
+  position: relative;
+  z-index: 2;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+}
+
+.dholera-dashboard__eyebrow {
+  margin: 0;
+
+  color: #ffffff;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  letter-spacing: 0.2em;
+}
+
+.dholera-dashboard__hero h1 {
+  margin: 8px 0 5px;
+
+  color: #ffffff;
+
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.dholera-dashboard__hero span {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 14px;
+}
+
+/* TOTAL ACTIVITY */
+
+.dholera-dashboard__hero-total {
+  position: relative;
+  z-index: 2;
+
+  min-width: 150px;
+  padding: 16px 22px;
+
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+
+  background: rgba(255, 255, 255, 0.13);
+
+  backdrop-filter: blur(10px);
+
+  text-align: center;
+}
+
+.dholera-dashboard__hero-total span {
+  display: block;
+
+  color: rgba(255, 255, 255, 0.85);
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dholera-dashboard__hero-total strong {
+  display: block;
+
+  margin-top: 5px;
+
+  color: #ffffff;
+
+  font-size: 30px;
+  font-weight: 900;
+}
+
+/* =========================================================
+   STATS
+========================================================= */
+
+.dholera-stats-grid {
+  display: grid;
+
+  /* NOW 4 CARDS */
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 18px;
+
+  margin-bottom: 30px;
+}
+
+.dholera-stat-card {
+  position: relative;
+  display: block;
+  overflow: hidden;
+
+  padding: 22px;
+
+  border: 1px solid #ffd9b8;
+  border-radius: 18px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 12px 35px rgba(255, 122, 0, 0.07);
+
+  color: inherit;
+  text-decoration: none;
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.dholera-stat-card::before {
+  position: absolute;
+
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 4px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #ff7a00,
+      #ffb06b
+    );
+
+  content: "";
+}
+
+.dholera-stat-card:hover {
+  border-color: #ffb06b;
+
+  transform: translateY(-4px);
+
+  box-shadow:
+    0 18px 40px rgba(255, 122, 0, 0.14);
+}
+
+.dholera-stat-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+}
+
+.dholera-stat-card__top span {
+  color: #79695d;
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dholera-stat-dot {
+  width: 10px;
+  height: 10px;
+
+  border-radius: 50%;
+
+  background: #ff7a00;
+
+  box-shadow:
+    0 0 0 5px rgba(255, 122, 0, 0.1);
+}
+
+.dholera-stat-card strong {
+  display: block;
+
+  margin-top: 12px;
+
+  color: #34261d;
+
+  font-size: 34px;
+  font-weight: 800;
+}
+
+/* STAT CARD FOOTER */
+
+.dholera-stat-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin-top: 5px;
+}
+
+.dholera-stat-card__footer p {
+  margin: 0;
+
+  color: #9b8b80;
+
+  font-size: 12px;
+}
+
+.dholera-stat-card__footer > span {
+  color: #ff7a00;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  white-space: nowrap;
+}
+
+.dholera-stat-card:hover
+.dholera-stat-card__footer > span {
+  transform: translateX(2px);
+}
+
+/* =========================================================
+   TODAY'S LEADS CARD
+========================================================= */
+
+/*
+   Dashboard currently uses the same StatCard component
+   for all cards, so Today's Leads automatically gets
+   the same premium styling.
+*/
+
+/* =========================================================
+   TABLE SECTIONS
+========================================================= */
+
+.dholera-dashboard-section {
+  margin-bottom: 26px;
+
+  overflow: hidden;
+
+  border: 1px solid #ffe0c5;
+  border-radius: 20px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 12px 35px rgba(90, 52, 24, 0.06);
+}
+
+.dholera-dashboard-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding: 20px 22px;
+
+  border-bottom: 1px solid #fff0e4;
+}
+
+.dholera-dashboard-section__header p {
+  margin: 0;
+
+  color: #ff7a00;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.dholera-dashboard-section__header h2 {
+  margin: 5px 0 0;
+
+  color: #34261d;
+
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.dholera-dashboard-section__header a {
+  padding: 9px 13px;
+
+  border-radius: 9px;
+
+  background: #fff4ea;
+
+  color: #ff7a00;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  text-decoration: none;
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.dholera-dashboard-section__header a:hover {
+  background: #ff7a00;
+  color: #ffffff;
+
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   DASHBOARD TABLE
+========================================================= */
+
+.dholera-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.dholera-table {
+  width: 100%;
+
+  border-collapse: collapse;
+}
+
+.dholera-table th {
+  padding: 14px 18px;
+
+  background: #fff8f2;
+
+  color: #79695d;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  text-align: left;
+  text-transform: uppercase;
+
+  letter-spacing: 0.06em;
+}
+
+.dholera-table td {
+  padding: 15px 18px;
+
+  border-top: 1px solid #fff2e8;
+
+  color: #4d4037;
+
+  font-size: 13px;
+}
+
+.dholera-table td strong {
+  color: #34261d;
+  font-weight: 750;
+}
+
+.dholera-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.dholera-table tbody tr:hover {
+  background: #fffaf6;
+}
+
+/* EMPTY TABLE */
+
+.dholera-empty-state {
+  padding: 28px !important;
+
+  color: #9b8b80 !important;
+
+  text-align: center;
+}
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.dholera-status {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 5px 10px;
+
+  border-radius: 999px;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  text-transform: capitalize;
+
+  white-space: nowrap;
+}
+
+/* NEW */
+
+.dholera-status--new {
+  background: #fff0e1;
+  color: #ff7a00;
+}
+
+/* CONTACTED */
+
+.dholera-status--contacted {
+  background: #fff7cc;
+  color: #8c7200;
+}
+
+/* FOLLOW UP */
+
+.dholera-status--follow-up {
+  background: #f4edff;
+  color: #7451b8;
+}
+
+/* QUALIFIED */
+
+.dholera-status--qualified {
+  background: #e9f8ee;
+  color: #297c47;
+}
+
+/* CLOSED */
+
+.dholera-status--closed {
+  background: #f1f1f1;
+  color: #555555;
+}
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+.dholera-dashboard-loading {
+  padding: 30px;
+
+  color: #79695d;
+
+  text-align: center;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+/* TABLET */
+
+@media (max-width: 1200px) {
+  .dholera-stats-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* MOBILE */
+
+@media (max-width: 700px) {
+  .dholera-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dholera-dashboard__hero {
+    padding: 24px;
+  }
+
+  .dholera-dashboard__hero-content {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dholera-dashboard__hero h1 {
+    font-size: 26px;
+  }
+
+  .dholera-dashboard__hero-total {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    text-align: left;
+  }
+
+  .dholera-dashboard-section__header {
+    align-items: flex-start;
+  }
+
+  .dholera-table {
+    min-width: 700px;
+  }
+}
+
+/* VERY SMALL MOBILE */
+
+@media (max-width: 480px) {
+  .dholera-dashboard__hero {
+    padding: 20px;
+
+    border-radius: 17px;
+  }
+
+  .dholera-stat-card {
+    padding: 19px;
+  }
+
+  .dholera-stat-card strong {
+    font-size: 30px;
+  }
+
+  .dholera-dashboard-section__header {
+    padding: 17px;
+  }
+
+  .dholera-dashboard-section__header h2 {
+    font-size: 17px;
+  }
+}
