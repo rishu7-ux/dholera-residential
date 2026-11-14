@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { unstable_cache } from "next/cache";
+import { connection } from "next/server";
 
 import {
   FaUserAlt,
@@ -64,6 +65,7 @@ const getPublishedBlogs = unstable_cache(
 ========================================================= */
 
 export default async function BlogSection() {
+  await connection();
   const blogs = await getPublishedBlogs();
 
   /* =========================================================
