@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
 export const MASTER_CMS_PROJECT_ID = "prj_BaMZLgjsftAewYTezNLEV0zG5v7A";
+const MAX_TOKEN_LIFETIME_MS = 15 * 60 * 1000;
 
 export type MongoIdentityEnvironment = Record<string, string | undefined>;
 
@@ -14,78 +15,71 @@ function response(status: number, body: Record<string, unknown>): Response {
   return Response.json(body, { status, headers: NO_STORE_HEADERS });
 }
 
-const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43,}$/;
-const DEPLOYMENT_ID_PATTERN = /^dpl_[A-Za-z0-9]+$/;
-
-function authorizationChecks(request: Request, configuredToken: string | undefined) {
-  const configuredTokenFormat = TOKEN_PATTERN.test(configuredToken ?? "");
-  const suppliedToken = /^Bearer (.+)$/.exec(request.headers.get("authorization") ?? "")?.[1];
-  const suppliedTokenFormat = TOKEN_PATTERN.test(suppliedToken ?? "");
-  let tokenMatch = false;
-
-  if (configuredTokenFormat && suppliedTokenFormat) {
-    const suppliedDigest = createHash("sha256").update(suppliedToken!).digest();
-    const expectedDigest = createHash("sha256").update(configuredToken!).digest();
-    tokenMatch = timingSafeEqual(suppliedDigest, expectedDigest);
-  }
-
-  return { configuredTokenFormat, suppliedTokenFormat, tokenMatch };
+function authorized(request: Request, configuredToken: string | undefined): boolean {
+  if (!configuredToken || !/^[A-Za-z0-9_-]{43,}$/.test(configuredToken)) return false;
+  const match = /^Bearer ([A-Za-z0-9_-]{43,})$/.exec(request.headers.get("authorization") ?? "");
+  if (!match) return false;
+  const suppliedDigest = createHash("sha256").update(match[1]).digest();
+  const expectedDigest = createHash("sha256").update(configuredToken).digest();
+  return timingSafeEqual(suppliedDigest, expectedDigest);
 }
 
-function mongoUriChecks(value: string | undefined) {
+function parseIdentity(env: MongoIdentityEnvironment): {
+  deploymentId: string;
+  hostname: string;
+  database: string;
+} | undefined {
+  const deploymentId = env.VERCEL_DEPLOYMENT_ID;
+  if (!deploymentId || !/^dpl_[A-Za-z0-9]+$/.test(deploymentId)) return undefined;
+
   let uri: URL;
   try {
-    uri = new URL(value ?? "");
+    uri = new URL(env.MONGODB_URI ?? "");
   } catch {
-    return { mongoScheme: false, mongoHostname: false, mongoDatabasePath: false, mongoPortAbsent: false };
+    return undefined;
   }
 
-  let databasePath = false;
+  let database: string;
   try {
-    databasePath = decodeURIComponent(uri.pathname.slice(1)).length > 0;
+    // Match the MongoDB driver's default when no database path is supplied.
+    // authSource selects the authentication database, not this namespace.
+    database = decodeURIComponent(uri.pathname.slice(1)) || "test";
   } catch {
-    // Invalid encoding is reported as a false boolean only.
+    return undefined;
   }
+
+  if (uri.protocol !== "mongodb+srv:" || !uri.hostname || !database || uri.port) return undefined;
 
   return {
-    mongoScheme: uri.protocol === "mongodb+srv:",
-    mongoHostname: uri.hostname.length > 0,
-    mongoDatabasePath: databasePath,
-    mongoPortAbsent: uri.port.length === 0,
+    deploymentId,
+    hostname: uri.hostname.toLowerCase(),
+    database,
   };
 }
 
-export function createProductionMongoIdentityHandler(env: MongoIdentityEnvironment) {
+export function createProductionMongoIdentityHandler(env: MongoIdentityEnvironment, now: () => number = Date.now) {
   return async function POST(request: Request): Promise<Response> {
-    const auth = authorizationChecks(request, env.MONGODB_IDENTITY_DIAGNOSTIC_TOKEN);
-    if (!auth.tokenMatch) {
-      console.info("mongodb-identity-auth-checks", auth);
+    const expiry = env.MONGODB_IDENTITY_DIAGNOSTIC_EXPIRES_AT;
+    const expiresAt = expiry && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(expiry)
+      ? Date.parse(expiry)
+      : NaN;
+    const remainingMs = expiresAt - now();
+    if (
+      env.VERCEL !== "1" ||
+      env.VERCEL_ENV !== "production" ||
+      env.VERCEL_PROJECT_ID !== MASTER_CMS_PROJECT_ID ||
+      !Number.isFinite(remainingMs) ||
+      remainingMs <= 0 ||
+      remainingMs > MAX_TOKEN_LIFETIME_MS ||
+      request.body !== null ||
+      (request.headers.get("content-length") !== null && request.headers.get("content-length") !== "0") ||
+      !authorized(request, env.MONGODB_IDENTITY_DIAGNOSTIC_TOKEN)
+    ) {
       return response(404, { error: "Not found" });
     }
 
-    const contentLength = request.headers.get("content-length");
-    let zeroByteBody = false;
-    try {
-      zeroByteBody =
-        (contentLength === null || contentLength === "0") &&
-        (await request.text()).length === 0;
-    } catch {
-      // Body read failures are reported as a false boolean only.
-    }
-
-    const checks = {
-      method: request.method === "POST",
-      zeroByteBody,
-      ...auth,
-      vercel: env.VERCEL === "1",
-      productionEnvironment: env.VERCEL_ENV === "production",
-      projectId: env.VERCEL_PROJECT_ID === MASTER_CMS_PROJECT_ID,
-      deploymentIdFormat: DEPLOYMENT_ID_PATTERN.test(env.VERCEL_DEPLOYMENT_ID ?? ""),
-      deploymentIdMatchesExpected:
-        DEPLOYMENT_ID_PATTERN.test(request.headers.get("x-expected-deployment-id") ?? "") &&
-        env.VERCEL_DEPLOYMENT_ID === request.headers.get("x-expected-deployment-id"),
-      ...mongoUriChecks(env.MONGODB_URI),
-    };
-    return response(200, { checks });
+    const identity = parseIdentity(env);
+    if (!identity) return response(404, { error: "Not found" });
+    return response(200, identity);
   };
 }
