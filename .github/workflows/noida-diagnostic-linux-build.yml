@@ -301,6 +301,23 @@ jobs:
             return {function:relative,files:packaged.length,sharp_paths:packaged.filter(p=>/sharp|libvips/.test(p)).map(p=>path.relative(dir,p)),archives:packaged.filter(p=>/\.(zip|tar)$/.test(p)).map(p=>path.relative(dir,p))};
           });
           const routes=config.routes.filter(r=>/api|payload/i.test(JSON.stringify({src:r.src,dest:r.dest}))).map(r=>({src:r.src,dest:r.dest}));
+          const functionDirs=[];
+          function findFunctionDirs(dir){
+            for(const e of fs.readdirSync(dir,{withFileTypes:true})){
+              const p=path.join(dir,e.name),real=fs.realpathSync(p),stat=fs.statSync(p);
+              if(real!==outputRoot&&!real.startsWith(outputRoot+path.sep))throw Error('Function symlink escapes output');
+              if(!stat.isDirectory())continue;
+              if(e.name.endsWith('.func')){
+                const cfgPath=path.join(p,'.vc-config.json');
+                const cfg=fs.existsSync(cfgPath)?JSON.parse(fs.readFileSync(cfgPath)):null;
+                const entries=fs.readdirSync(p);
+                const sharpEntries=entries.filter(n=>/sharp|node_modules/i.test(n));
+                functionDirs.push({path:path.relative(out,p),real_path:path.relative(out,real),symlink:e.isSymbolicLink(),config:cfg?{runtime:cfg.runtime,handler:cfg.handler}:null,top_level:entries,sharp_entries:sharpEntries});
+              }else findFunctionDirs(p);
+            }
+          }
+          findFunctionDirs(path.join(out,'functions'));
+          console.log('OUTPUT_FUNCTION_INVENTORY',JSON.stringify({routes,function_dirs:functionDirs}));
           console.log('OUTPUT_FUNCTION_MAP',JSON.stringify({routes,functions:functionSummary.map(x=>({function:x.function,files:x.files,sharp_paths:x.sharp_paths,archives:x.archives}))}));
           console.log('OUTPUT_NATIVE_EVIDENCE',JSON.stringify({payload_trace_native:tracedNative.length,output_native:native.length,sharp_linux_x64:sharp}));
           if(!sharp)throw Error('Payload-required Linux Sharp absent from packaged output');
