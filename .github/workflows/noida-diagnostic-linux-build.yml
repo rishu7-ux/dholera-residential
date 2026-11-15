@@ -233,7 +233,11 @@ jobs:
           node <<'SHARPCHECK'
           require('sharp');
           const fs=require('fs');
-          const p=require.resolve('@img/sharp-linux-x64/sharp.node');
+          const path=require('path');
+          const pkgRoot=path.dirname(require.resolve('@img/sharp-linux-x64/sharp.node'));
+          const pkg=require(path.join(pkgRoot,'package.json'));
+          if(pkg.name!=='@img/sharp-linux-x64'||pkg.version!=='0.35.5')throw Error('Sharp pin mismatch');
+          const p=path.join(pkgRoot,'lib',`sharp-linux-x64-${pkg.version}.node`);
           const b=fs.readFileSync(p);
           const header={resolved_path:p,magic:b.subarray(0,4).toString('hex'),elf_class:b[4],elf_endian:b[5],machine_le:b.readUInt16LE(18)};
           console.log('PINNED_SHARP_HEADER',JSON.stringify(header));
