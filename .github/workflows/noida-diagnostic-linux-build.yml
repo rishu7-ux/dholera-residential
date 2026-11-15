@@ -150,6 +150,10 @@ jobs:
               name=path.relative_to(root).as_posix()
               if path.is_symlink():
                   assert path.resolve().is_relative_to(root.resolve()), 'Cache symlink escapes cache'
+                  if not path.exists():
+                      assert any(part.startswith('.VLT.DELETE.') for part in path.parts), 'Unexpected dangling builder link'
+                      path.unlink()  # only a dangling vlt temporary symlink
+                      continue
                   records[name]={'link':os.readlink(path)}
               elif path.is_file():
                   records[name]={'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
