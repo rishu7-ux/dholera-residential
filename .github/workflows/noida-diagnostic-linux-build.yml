@@ -230,7 +230,15 @@ jobs:
           # under network none and the read-only builder mount.
           node -e 'const p=require("/builders/3acc6c05bbf2fa7b780bf531eb9a8a31b6e591785fc76763d89c507560d8d76d/node_modules/@vercel/next/package.json");if(p.version!=="29.1.0")throw Error("Next builder mismatch")'
           npm ci --offline --ignore-scripts --legacy-peer-deps --include=optional --no-audit --no-fund
-          node -e 'require("sharp");const fs=require("fs");const p=require.resolve("@img/sharp-linux-x64/sharp.node");const b=fs.readFileSync(p);if(b.readUInt32BE(0)!==0x7f454c46||b.readUInt16LE(18)!==62)throw Error("Sharp is not Linux x64 ELF")'
+          node <<'SHARPCHECK'
+          require('sharp');
+          const fs=require('fs');
+          const p=require.resolve('@img/sharp-linux-x64/sharp.node');
+          const b=fs.readFileSync(p);
+          const header={resolved_path:p,magic:b.subarray(0,4).toString('hex'),elf_class:b[4],elf_endian:b[5],machine_le:b.readUInt16LE(18)};
+          console.log('PINNED_SHARP_HEADER',JSON.stringify(header));
+          if(header.magic!=='7f454c46'||header.elf_class!==2||header.elf_endian!==1||header.machine_le!==62)throw Error('Sharp is not Linux x64 ELF');
+          SHARPCHECK
           # No pull, --yes, --deployment, account token, or remote project lookup.
           # A missing remote dependency/settings fails under network none.
           /tools/node_modules/.bin/vercel build --prod </dev/null
