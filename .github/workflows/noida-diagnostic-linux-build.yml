@@ -119,27 +119,35 @@ jobs:
               node -e "const expected={\"vercel\":\"65.15.0\",\"@vercel/next\":\"29.1.0\",\"@vercel/build-utils\":\"15.3.0\",\"@vercel/vc-native-linux-x64\":\"65.15.0\"};for(const [name,version] of Object.entries(expected)){if(require(name+\"/package.json\").version!==version)throw Error(\"Tool pin mismatch: \"+name)}if(typeof require(\"@vercel/next\").build!==\"function\")throw Error(\"Builder entry missing\")"
             '
 
-      # CLI 65.15.0 has a native, token-free builders preinstall command.
-      # It installs ALL embedded builder graphs (no selective argument exists).
+      # This accepted source is Next.js 16.4.5 and the local project settings
+      # select framework nextjs. CLI 65.15.0 pins @vercel/next 29.1.0 to the
+      # graph below. Preinstall stages all graphs; only Next is copied to the
+      # isolated cache. If build requests another graph, it fails closed.
       # No accepted application source, project link, env files or host home
       # is mounted into this network-enabled dependency-staging container.
       - name: Stage native managed builder cache on Linux x64
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/noida-builders"
+          mkdir -p "$RUNNER_TEMP/noida-builders-all" "$RUNNER_TEMP/noida-builders"
           docker run --rm --platform linux/amd64 --user "$(id -u):$(id -g)" \
             --cap-drop ALL --security-opt no-new-privileges \
             --env HOME=/tmp --env CI=1 --env VERCEL_TELEMETRY_DISABLED=1 \
-            --env VERCEL_BUILDERS_DIR=/builders \
+            --env VERCEL_BUILDERS_DIR=/builders-all \
             --mount "type=bind,src=$RUNNER_TEMP/noida-tools,dst=/tools,readonly" \
-            --mount "type=bind,src=$RUNNER_TEMP/noida-builders,dst=/builders" \
+            --mount "type=bind,src=$RUNNER_TEMP/noida-builders-all,dst=/builders-all" \
             --workdir /tmp node:24.11.1-bookworm-slim@sha256:44b49d6e2d23f6754fb084ef9d34ff14590343ad1ee168f8acf8f7bc9fccde2f \
             /tools/node_modules/.bin/vercel builders preinstall </dev/null
           python3 - <<'CACHE'
-          import hashlib,json,os,pathlib
-          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'noida-builders'
+          import hashlib,json,os,pathlib,shutil
+          base=pathlib.Path(os.environ['RUNNER_TEMP'])
+          root=base/'noida-builders'
+          source=base/'noida-builders-all'
           graph='3acc6c05bbf2fa7b780bf531eb9a8a31b6e591785fc76763d89c507560d8d76d'
+          assert not any(root.iterdir()), 'Isolated cache must be empty'
+          assert (source/graph/'.vercel-builder-graph').read_text().strip()==graph
+          shutil.copytree(source/graph,root/graph,symlinks=True)
+          assert {p.name for p in root.iterdir()}=={graph}, 'Only Next builder graph may be staged'
           target=root/graph
           assert (target/'.vercel-builder-graph').read_text().strip()==graph
           pkg=json.loads((target/'node_modules/@vercel/next/package.json').read_text())
@@ -150,16 +158,7 @@ jobs:
               name=path.relative_to(root).as_posix()
               if path.is_symlink():
                   assert path.resolve().is_relative_to(root.resolve()), 'Cache symlink escapes cache'
-                  if not path.exists():
-                      if not any(part.startswith('.VLT.DELETE.') for part in path.parts):
-                          print('UNEXPECTED_DANGLING_BUILDER_LINK',json.dumps({
-                              'relative_path':name,
-                              'link_target':os.readlink(path),
-                              'parent_directory':path.parent.relative_to(root).as_posix(),
-                          },sort_keys=True),flush=True)
-                          raise AssertionError('Unexpected dangling builder link')
-                      path.unlink()  # only a dangling vlt temporary symlink
-                      continue
+                  assert path.exists(), 'Dangling Next builder dependency'
                   records[name]={'link':os.readlink(path)}
               elif path.is_file():
                   records[name]={'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
@@ -227,8 +226,9 @@ jobs:
           for(const [n,v] of Object.entries(expected))if(JSON.stringify(actual[n])!==JSON.stringify(v))throw Error('Cache integrity mismatch');
           console.log('Staged managed-cache integrity PASS');
           CACHEVERIFY
-          # A missing cache cannot be repaired: read-only mount plus network none.
-          /tools/node_modules/.bin/vercel builders preinstall </dev/null
+          # Only the pinned Next graph is present; missing graph requests fail
+          # under network none and the read-only builder mount.
+          node -e 'const p=require("/builders/3acc6c05bbf2fa7b780bf531eb9a8a31b6e591785fc76763d89c507560d8d76d/node_modules/@vercel/next/package.json");if(p.version!=="29.1.0")throw Error("Next builder mismatch")'
           npm ci --offline --ignore-scripts --legacy-peer-deps --include=optional --no-audit --no-fund
           node -e 'require("sharp");const fs=require("fs");const p=require.resolve("@img/sharp-linux-x64/sharp.node");const b=fs.readFileSync(p);if(b.readUInt32BE(0)!==0x7f454c46||b.readUInt16LE(18)!==62)throw Error("Sharp is not Linux x64 ELF")'
           # No pull, --yes, --deployment, account token, or remote project lookup.
