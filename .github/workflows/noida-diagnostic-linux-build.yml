@@ -168,7 +168,7 @@ jobs:
           # host home, credentials, macOS output, or runner Docker socket.
           mkdir -p "$RUNNER_TEMP/noida-package"
           git -C source archive 3224f9e0a7ceca4377d636239c8ef53dc6cf0d9d | tar -x -C "$RUNNER_TEMP/noida-package"
-          docker run --rm --platform linux/amd64 --network none --cap-drop ALL \
+          docker run --rm -i --platform linux/amd64 --network none --cap-drop ALL \
             --security-opt no-new-privileges --user "$(id -u):$(id -g)" \
             --mount "type=bind,src=$RUNNER_TEMP/noida-package,dst=/work" \
             --mount "type=bind,src=$RUNNER_TEMP/noida-tools,dst=/tools,readonly" \
