@@ -116,7 +116,7 @@ jobs:
             --mount "type=bind,src=$RUNNER_TEMP/noida-npm-cache,dst=/npm-cache" \
             --workdir /tools node:24.11.1-bookworm-slim@sha256:44b49d6e2d23f6754fb084ef9d34ff14590343ad1ee168f8acf8f7bc9fccde2f sh -eu -c '
               npm ci --ignore-scripts --include=optional --no-audit --no-fund
-              node -e "for(const [n,v] of Object.entries({vercel:"65.15.0","@vercel/next":"29.1.0","@vercel/build-utils":"15.3.0","@vercel/vc-native-linux-x64":"65.15.0"})){if(require(n+"/package.json").version!==v)throw Error("Tool pin mismatch")}if(typeof require("@vercel/next").build!=="function")throw Error("Builder entry missing")"
+              node -e "const expected={\"vercel\":\"65.15.0\",\"@vercel/next\":\"29.1.0\",\"@vercel/build-utils\":\"15.3.0\",\"@vercel/vc-native-linux-x64\":\"65.15.0\"};for(const [name,version] of Object.entries(expected)){if(require(name+\"/package.json\").version!==version)throw Error(\"Tool pin mismatch: \"+name)}if(typeof require(\"@vercel/next\").build!==\"function\")throw Error(\"Builder entry missing\")"
             '
 
       # CLI 65.15.0 has a native, token-free builders preinstall command.
