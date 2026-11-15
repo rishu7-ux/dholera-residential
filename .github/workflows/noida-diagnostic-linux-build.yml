@@ -151,7 +151,13 @@ jobs:
               if path.is_symlink():
                   assert path.resolve().is_relative_to(root.resolve()), 'Cache symlink escapes cache'
                   if not path.exists():
-                      assert any(part.startswith('.VLT.DELETE.') for part in path.parts), 'Unexpected dangling builder link'
+                      if not any(part.startswith('.VLT.DELETE.') for part in path.parts):
+                          print('UNEXPECTED_DANGLING_BUILDER_LINK',json.dumps({
+                              'relative_path':name,
+                              'link_target':os.readlink(path),
+                              'parent_directory':path.parent.relative_to(root).as_posix(),
+                          },sort_keys=True),flush=True)
+                          raise AssertionError('Unexpected dangling builder link')
                       path.unlink()  # only a dangling vlt temporary symlink
                       continue
                   records[name]={'link':os.readlink(path)}
