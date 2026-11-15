@@ -259,10 +259,28 @@ jobs:
           const files=walk(out),funcs=files.filter(p=>p.endsWith('/.vc-config.json'));
           if(!funcs.length)throw Error('Missing Vercel functions');
           for(const p of funcs){const c=JSON.parse(fs.readFileSync(p));if(!c.runtime)throw Error('Missing function runtime');if(c.runtime.startsWith('nodejs')&&(!c.handler||!fs.existsSync(path.join(path.dirname(p),c.handler))))throw Error('Missing function handler')}
+          // The Payload API function trace requires Sharp at runtime.
+          const payloadTrace=JSON.parse(fs.readFileSync('.next/server/app/(payload)/api/[...slug]/route.js.nft.json'));
+          const tracedNative=(payloadTrace.files||[]).filter(p=>/node_modules\/@img\/sharp-linux-x64\/.*\.node$/.test(p));
+          if(!tracedNative.length)throw Error('Payload Sharp trace identity missing');
+          const outputRoot=path.resolve(out),visited=new Set(),native=[];
+          function scanNative(dir){
+            const real=fs.realpathSync(dir);
+            if(real!==outputRoot&&!real.startsWith(outputRoot+path.sep))throw Error('Nonportable output symlink');
+            if(visited.has(real))return;
+            visited.add(real);
+            for(const e of fs.readdirSync(dir,{withFileTypes:true})){
+              const p=path.join(dir,e.name),resolved=fs.realpathSync(p),stat=fs.statSync(p);
+              if(resolved!==outputRoot&&!resolved.startsWith(outputRoot+path.sep))throw Error('Nonportable output symlink');
+              if(stat.isDirectory())scanNative(p);
+              else if(stat.isFile()&&p.endsWith('.node'))native.push(p);
+            }
+          }
+          scanNative(out);
           let sharp=0;
-          for(const p of files.filter(p=>p.endsWith('.node'))){const b=fs.readFileSync(p);if(b.readUInt32BE(0)!==0x7f454c46||b.readUInt16LE(18)!==62)throw Error('Non Linux x64 native output');if(p.includes('sharp'))sharp++}
-          if(!sharp)throw Error('Linux Sharp absent from packaged output');
-          for(const p of files){if(fs.lstatSync(p).isSymbolicLink()){const real=fs.realpathSync(p);if(!real.startsWith(path.resolve(out)+path.sep))throw Error('Nonportable output symlink')}}
+          for(const p of native){const b=fs.readFileSync(p);if(b.subarray(0,4).toString('hex')!=='7f454c46'||b[4]!==2||b[5]!==1||b.readUInt16LE(18)!==62)throw Error('Non Linux x64 native output');if(p.includes('sharp-linux-x64'))sharp++}
+          console.log('OUTPUT_NATIVE_EVIDENCE',JSON.stringify({payload_trace_native:tracedNative.length,output_native:native.length,sharp_linux_x64:sharp}));
+          if(!sharp)throw Error('Payload-required Linux Sharp absent from packaged output');
           // Output routing equivalence must additionally be reviewed against
           // config.routes rewrites/function routing before release readiness.
           console.log('27 compiled baseline routes; v3 structure and Linux native binaries verified');
