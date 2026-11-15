@@ -177,6 +177,22 @@ jobs:
           # host home, credentials, macOS output, or runner Docker socket.
           mkdir -p "$RUNNER_TEMP/noida-package"
           git -C source archive 3224f9e0a7ceca4377d636239c8ef53dc6cf0d9d | tar -x -C "$RUNNER_TEMP/noida-package"
+          # Build-copy-only Next tracing fix: Payload's catch-all API trace
+          # requires Sharp, but the previous Vercel function output omitted it.
+          # Keep the accepted Git revision and its tracked config untouched.
+          python3 - <<'TRACEFIX'
+          import hashlib,os,pathlib
+          p=pathlib.Path(os.environ['RUNNER_TEMP'])/'noida-package/next.config.ts'
+          original=p.read_bytes()
+          assert hashlib.sha256(original).hexdigest()=='33d51289161cc2f57cd7396af35189d6a3d606f56a6bfcdb4c20c4c867bd54ea'
+          marker='const nextConfig: NextConfig = {\n'
+          addition="  outputFileTracingIncludes: {\n    '/api/**': [\n      './node_modules/sharp/package.json',\n      './node_modules/sharp/lib/**/*',\n      './node_modules/@img/sharp-linux-x64/package.json',\n      './node_modules/@img/sharp-linux-x64/lib/**/*',\n      './node_modules/@img/sharp-libvips-linux-x64/package.json',\n      './node_modules/@img/sharp-libvips-linux-x64/lib/**/*',\n    ],\n  },\n"
+          text=original.decode()
+          assert text.count(marker)==1
+          patched=text.replace(marker,marker+addition,1)
+          p.write_text(patched)
+          print('BUILD_COPY_TRACING_PATCH_SHA256',hashlib.sha256(patched.encode()).hexdigest())
+          TRACEFIX
           docker run --rm -i --platform linux/amd64 --network none --cap-drop ALL \
             --security-opt no-new-privileges --user "$(id -u):$(id -g)" \
             --mount "type=bind,src=$RUNNER_TEMP/noida-package,dst=/work" \
@@ -284,7 +300,9 @@ jobs:
             const packaged=files.filter(p=>p.startsWith(prefix));
             return {function:relative,files:packaged.length,sharp_paths:packaged.filter(p=>/sharp|libvips/.test(p)).map(p=>path.relative(dir,p)),archives:packaged.filter(p=>/\.(zip|tar)$/.test(p)).map(p=>path.relative(dir,p))};
           });
-          console.log('OUTPUT_NATIVE_EVIDENCE',JSON.stringify({payload_trace_native:tracedNative.length,output_native:native.length,sharp_linux_x64:sharp,output_roots:fs.readdirSync(out),functions:functionSummary.filter(x=>/api|image|payload/i.test(x.function))}));
+          const routes=config.routes.filter(r=>/api|payload/i.test(JSON.stringify({src:r.src,dest:r.dest}))).map(r=>({src:r.src,dest:r.dest}));
+          console.log('OUTPUT_FUNCTION_MAP',JSON.stringify({routes,functions:functionSummary.map(x=>({function:x.function,files:x.files,sharp_paths:x.sharp_paths,archives:x.archives}))}));
+          console.log('OUTPUT_NATIVE_EVIDENCE',JSON.stringify({payload_trace_native:tracedNative.length,output_native:native.length,sharp_linux_x64:sharp}));
           if(!sharp)throw Error('Payload-required Linux Sharp absent from packaged output');
           // Output routing equivalence must additionally be reviewed against
           // config.routes rewrites/function routing before release readiness.
