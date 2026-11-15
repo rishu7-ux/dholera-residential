@@ -46,9 +46,33 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/noida-fonts"
-          tar -xf ci/.github/noida-build/offline-fonts.tar -C "$RUNNER_TEMP/noida-fonts"
-          test "$(find "$RUNNER_TEMP/noida-fonts" -maxdepth 1 -type f -name '*.woff2' | wc -l)" = 11
+          # Exact font bytes are pinned from the previously checksum-verified archive.
+          # Copy only regular allowlisted fonts; never extract macOS metadata,
+          # archive paths, links, permissions or extended attributes.
+          python3 - <<'FONTS'
+          import hashlib,json,os,pathlib,tarfile
+          expected={'013b72fa676f92e0-s.woff2': 'e27f657e38d52887baa3b6b2f812bef93dfdd356f0810e40edd4ee284cc7e9f6', '22a5144ee8d83bca-s.p.woff2': '9b6f5ff45b278c744b5f379a2c4ecbaf858a842b8eaf82ac8d21b699ca16c608', '2b5b02fc7e511755-s.woff2': '745994b5cd950ec201b66526375f057d540847cccfc70f4f24f5f571d26d3923', '65f03d54ccadf4a8-s.woff2': 'd67e4a94ba498635f764ddca7d1ec4271f5642f032eb24b426764480f66f8497', '7d4881bb7e1bf84d-s.p.woff2': '5f3d6ad60f29d6cb708414ec6887163d63bf197377ef5417d2483ff31ace6c3b', '9766a7e9e2e0ad5a-s.woff2': '6129fc8571c3e0cb0a4c41f5160c974a843b055009dc4ad8858bd808e18a2d86', 'aa016aab0e6d1295-s.woff2': '58a6b173d5ca1dec92166ea3c6cb1a84a4144556d10928ac14e8e6b40e4787bd', 'b66cf8e69499582a-s.woff2': 'f689f638f29fff460a2d5749edb5d5c38d7bef0389f32032d871f23fc6ebb008', 'b9408752a0c24fb9-s.woff2': '75b3bedbebc35f347c0ae3b416aa871941555357e7b0f83767eb5987875589ed', 'e038a29029a234f2-s.woff2': '16e1d48b6dd29eb240aec5db36184eb182933c082cd43de7f35af686d58087d2', 'f639721981034f88-s.woff2': 'b7a545bbb08256bd809f11cfe66d88da3e22d169ea4407737b1ef0ec1ed3d791'}
+          dest=pathlib.Path(os.environ['RUNNER_TEMP'])/'noida-fonts'
+          dest.mkdir(exist_ok=True)
+          assert not any(dest.iterdir()), 'Font destination must be empty'
+          seen=set()
+          with tarfile.open('ci/.github/noida-build/offline-fonts.tar') as archive:
+              for member in archive.getmembers():
+                  parts=pathlib.PurePosixPath(member.name).parts
+                  if any(p.startswith('._') or p in ('__MACOSX','.DS_Store') for p in parts):
+                      continue
+                  assert member.name in expected and member.isfile(), 'Unexpected font archive entry'
+                  assert member.name not in seen, 'Duplicate font entry'
+                  data=archive.extractfile(member).read()
+                  assert data[:4]==b'wOF2' and hashlib.sha256(data).hexdigest()==expected[member.name], 'Font integrity mismatch'
+                  (dest/member.name).write_bytes(data)
+                  seen.add(member.name)
+          assert seen==set(expected) and len(seen)==11
+          assert {p.name for p in dest.iterdir()}==seen
+          for name,digest in expected.items():
+              assert hashlib.sha256((dest/name).read_bytes()).hexdigest()==digest
+          print('PASS: exactly 11 real WOFF2 fonts; all pinned SHA-256 checksums match')
+          FONTS
 
       # Dependency retrieval is separate from the application build. npm
       # lifecycle scripts are disabled and no Production secret is supplied.
