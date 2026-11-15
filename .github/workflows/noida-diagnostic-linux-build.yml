@@ -318,6 +318,12 @@ jobs:
           }
           findFunctionDirs(path.join(out,'functions'));
           console.log('OUTPUT_FUNCTION_INVENTORY',JSON.stringify({routes,function_dirs:functionDirs}));
+          const payloadLink=path.join(out,'functions/api/[...slug].func');
+          const payloadPhysical=fs.realpathSync(payloadLink);
+          if(payloadPhysical!==path.resolve(out,'functions/api/dholera-estates-blog-feed.func'))throw Error('Payload function mapping changed');
+          const payloadFiles=walk(payloadPhysical).map(p=>path.relative(payloadPhysical,p));
+          const traceNativePath=path.resolve('.next/server/app/(payload)/api/[...slug]',tracedNative[0]);
+          console.log('PAYLOAD_FUNCTION_LAYOUT',JSON.stringify({link:path.relative(out,payloadLink),physical:path.relative(out,payloadPhysical),files:payloadFiles,trace_native_present:fs.existsSync(traceNativePath),trace_native_path:path.relative('.',traceNativePath),function_native_present:fs.existsSync(path.join(payloadPhysical,'node_modules/@img/sharp-linux-x64/lib/sharp-linux-x64-0.35.5.node'))}));
           console.log('OUTPUT_FUNCTION_MAP',JSON.stringify({routes,functions:functionSummary.map(x=>({function:x.function,files:x.files,sharp_paths:x.sharp_paths,archives:x.archives}))}));
           console.log('OUTPUT_NATIVE_EVIDENCE',JSON.stringify({payload_trace_native:tracedNative.length,output_native:native.length,sharp_linux_x64:sharp}));
           if(!sharp)throw Error('Payload-required Linux Sharp absent from packaged output');
