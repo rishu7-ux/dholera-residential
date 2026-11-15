@@ -1,6 +1,7 @@
 import type { CollectionConfig } from "payload";
 
 import { crmActivityRead, crmContentHidden, crmLeadRead, crmLeadUpdate, crmOfficeRead, crmTeamRead, superAdminField, superAdminOnly } from "../lib/crm/access";
+import { validateLeadOperationUpdate } from "../lib/crm/lead-operations";
 
 export const CrmOffices: CollectionConfig = {
   slug: "crm-offices",
@@ -54,19 +55,14 @@ export const CentralLeads: CollectionConfig = {
     delete: superAdminOnly,
   },
   hooks: {
+    beforeChange: [({ data, originalDoc, operation }) => {
+      if (operation === "update") validateLeadOperationUpdate(data, originalDoc || {});
+      return data;
+    }],
     afterChange: [async ({ doc, previousDoc, operation, req }) => {
       if (operation !== "update") return doc;
       const actor = req.user?.id;
       const events: Array<{ event: "status-changed" | "note-added" | "follow-up-scheduled" | "assigned" | "reassigned"; details: Record<string, unknown> }> = [];
-      if (doc.status !== previousDoc?.status) {
-        events.push({ event: "status-changed", details: { from: previousDoc?.status || "new", to: doc.status } });
-      }
-      if (doc.notes && doc.notes !== previousDoc?.notes) {
-        events.push({ event: "note-added", details: { note: doc.notes } });
-      }
-      if (doc.nextFollowUpAt !== previousDoc?.nextFollowUpAt) {
-        events.push({ event: "follow-up-scheduled", details: { from: previousDoc?.nextFollowUpAt || null, to: doc.nextFollowUpAt || null } });
-      }
       const relationKey = (value: unknown): string | null => {
         if (value && typeof value === "object") {
           const relation = value as { id?: unknown; toHexString?: () => string };
@@ -75,6 +71,15 @@ export const CentralLeads: CollectionConfig = {
         }
         return value == null ? null : String(value);
       };
+      if (doc.status !== previousDoc?.status) {
+        events.push({ event: "status-changed", details: { from: previousDoc?.status || "new", to: doc.status } });
+      }
+      if ((doc.notes ?? "") !== (previousDoc?.notes ?? "")) {
+        events.push({ event: "note-added", details: { action: doc.notes ? "updated" : "cleared", note: doc.notes || "" } });
+      }
+      if (doc.nextFollowUpAt !== previousDoc?.nextFollowUpAt) {
+        events.push({ event: "follow-up-scheduled", details: { from: previousDoc?.nextFollowUpAt || null, to: doc.nextFollowUpAt || null } });
+      }
       if (relationKey(doc.assignedSalesperson) !== relationKey(previousDoc?.assignedSalesperson)) {
         events.push({ event: previousDoc?.assignedSalesperson ? "reassigned" : "assigned", details: {
           from: relationKey(previousDoc?.assignedSalesperson) || null,

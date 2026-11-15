@@ -1,4 +1,5 @@
 import type { AdminViewServerProps } from "payload";
+import { isSuperAdmin } from "../../lib/crm/access";
 
 type Enquiry = {
   id: string;
@@ -23,6 +24,9 @@ export default async function DholeraEstatesDashboard({
   initPageResult,
 }: AdminViewServerProps) {
   const { payload } = initPageResult.req;
+  if (!isSuperAdmin(initPageResult.req.user as { role?: "super-admin" | "team-leader" | "salesperson" } | null)) {
+    return <div className="dholera-dashboard"><h2>Use the Noida Sales CRM dashboard for assigned lead access.</h2></div>;
+  }
   const now = new Date();
   const startOfToday = new Date(
     now.getFullYear(),

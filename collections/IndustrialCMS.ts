@@ -1,7 +1,7 @@
-import type { Access, CollectionConfig, Field } from "payload";
+import type { CollectionConfig, Field } from "payload";
+import { crmContentHidden, legacyLeadAdminAccess, superAdminOnly } from "../lib/crm/access";
 
-const authenticated: Access = ({ req }) => Boolean(req.user);
-const privateAccess = { create: authenticated, read: authenticated, update: authenticated, delete: authenticated };
+const privateAccess = legacyLeadAdminAccess;
 const status: Field = { name: "status", type: "select", defaultValue: "new", options: [
   { label: "New", value: "new" }, { label: "Contacted", value: "contacted" },
   { label: "Follow Up", value: "follow-up" }, { label: "Qualified", value: "qualified" }, { label: "Closed", value: "closed" },
@@ -14,7 +14,7 @@ export const Users: CollectionConfig = {
 export const IndustrialEnquiries: CollectionConfig = {
   slug: "industrial-enquiries",
   labels: { singular: "Industrial Enquiry", plural: "Industrial Enquiries" },
-  admin: { useAsTitle: "name", group: "Industrial Leads", defaultColumns: ["name", "email", "phone", "property", "source", "status", "createdAt"] },
+  admin: { useAsTitle: "name", group: "Industrial Leads", defaultColumns: ["name", "email", "phone", "property", "source", "status", "createdAt"], hidden: crmContentHidden },
   access: privateAccess,
   fields: [
     { name: "name", type: "text", required: true }, { name: "email", type: "email", required: true },
@@ -30,7 +30,7 @@ export const IndustrialEnquiries: CollectionConfig = {
 export const IndustrialContactMessages: CollectionConfig = {
   slug: "industrial-contact-messages",
   labels: { singular: "Industrial Contact Message", plural: "Industrial Contact Messages" },
-  admin: { useAsTitle: "name", group: "Industrial Leads", defaultColumns: ["name", "email", "phone", "propertyType", "budget", "status", "createdAt"] },
+  admin: { useAsTitle: "name", group: "Industrial Leads", defaultColumns: ["name", "email", "phone", "propertyType", "budget", "status", "createdAt"], hidden: crmContentHidden },
   access: privateAccess,
   fields: [
     { name: "name", type: "text", required: true }, { name: "email", type: "email", required: true }, { name: "phone", type: "text", required: true },
@@ -48,8 +48,8 @@ export const IndustrialContactMessages: CollectionConfig = {
 };
 
 export const Media: CollectionConfig = {
-  slug: "media", admin: { useAsTitle: "alt", group: "Industrial Content" },
-  access: { read: () => true, create: authenticated, update: authenticated, delete: authenticated },
+  slug: "media", admin: { useAsTitle: "alt", group: "Industrial Content", hidden: crmContentHidden },
+  access: { read: () => true, create: superAdminOnly, update: superAdminOnly, delete: superAdminOnly },
   upload: { staticDir: "media", mimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"] },
   fields: [{ name: "alt", label: "Alt Text", type: "text", required: true }], timestamps: true,
 };
@@ -57,8 +57,8 @@ export const Media: CollectionConfig = {
 export const IndustrialBlogs: CollectionConfig = {
   slug: "industrial-blogs",
   labels: { singular: "Industrial Blog", plural: "Industrial Blogs" },
-  admin: { useAsTitle: "title", group: "Industrial Content", defaultColumns: ["title", "slug", "status", "publishedAt", "createdAt"] },
-  access: { read: () => true, create: authenticated, update: authenticated, delete: authenticated },
+  admin: { useAsTitle: "title", group: "Industrial Content", defaultColumns: ["title", "slug", "status", "publishedAt", "createdAt"], hidden: crmContentHidden },
+  access: { read: () => true, create: superAdminOnly, update: superAdminOnly, delete: superAdminOnly },
   fields: [
     { name: "title", label: "Blog Title", type: "text", required: true },
     { name: "slug", label: "Slug", type: "text", required: true, unique: true, admin: {

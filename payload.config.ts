@@ -14,7 +14,6 @@ import {
   lexicalEditor,
 } from "@payloadcms/richtext-lexical";
 import { vercelBlobStorage } from "@payloadcms/storage-vercel-blob";
-import { nodemailerAdapter } from "@payloadcms/email-nodemailer";
 
 import {
   Estate2ContactMessages,
@@ -31,7 +30,9 @@ import { AIKnowledge } from "./collections/AIKnowledge.ts";
 import { CentralLeads, CrmActivities, CrmOffices, CrmTeams } from "./collections/Crm.ts";
 import { crmContentHidden, crmUserRead, isSuperAdmin, legacyLeadAdminAccess, superAdminField, superAdminOnly } from "./lib/crm/access";
 import { createPasswordSetupEmail } from "./lib/crm/password-setup-email";
-import { getPayloadSMTPConfiguration } from "./lib/crm/smtp-email-config";
+import { getConfiguredPayloadEmailAdapter } from "./lib/crm/smtp-email-adapter";
+import { handleStaffInvitation } from "./lib/crm/staff-invitation";
+import { resolveNoidaStagingMongoUri } from "./lib/noida-staging-runtime";
 import {
   OmanaContactMessages,
   OmanaEnquiries,
@@ -43,7 +44,7 @@ import {
    USERS COLLECTION
 ========================================================= */
 
-const Users: CollectionConfig = {
+export const Users: CollectionConfig = {
   slug: "users",
 
   auth: {
@@ -69,57 +70,7 @@ const Users: CollectionConfig = {
     {
       path: "/:id/invite",
       method: "post",
-      handler: async (req) => {
-        const actor = req.user as (typeof req.user & { role?: string }) | null;
-        if (!actor || actor.role !== "super-admin") {
-          return Response.json({ error: "Forbidden" }, { status: 403 });
-        }
-
-        let inviteeId: string | undefined;
-        try {
-          const invitee = await req.payload.findByID({
-            collection: "users",
-            id: String(req.routeParams?.id ?? ""),
-            req,
-            overrideAccess: false,
-            depth: 0,
-          });
-          const inviteeRole = (invitee as typeof invitee & { role?: string }).role;
-          if (inviteeRole !== "salesperson" && inviteeRole !== "team-leader") {
-            return Response.json({ error: "Invite unavailable" }, { status: 404 });
-          }
-          if (req.payload.email.name === "console") {
-            return Response.json({ error: "Email delivery is not configured. No setup link was generated." }, { status: 503 });
-          }
-          inviteeId = String(invitee.id);
-
-          // Payload stores an expiring reset token and delivers the raw token
-          // only in the email body. Never return or log the token here.
-          await req.payload.forgotPassword({
-            collection: "users",
-            data: { email: invitee.email },
-            req,
-            overrideAccess: false,
-          });
-          return Response.json({ message: "If the account is eligible, a setup link has been sent." }, { status: 202 });
-        } catch {
-          // If token creation succeeded but delivery failed, invalidate the
-          // undelivered link before reporting failure. Do not log tokens.
-          if (inviteeId) {
-            try {
-              await req.payload.update({
-                collection: "users",
-                id: inviteeId,
-                data: { resetPasswordToken: null, resetPasswordExpiration: null },
-                overrideAccess: true,
-              });
-            } catch {
-              // Preserve the generic failure response if cleanup also fails.
-            }
-          }
-          return Response.json({ error: "Invitation delivery failed. No setup confirmation was sent." }, { status: 503 });
-        }
-      },
+      handler: handleStaffInvitation,
     },
   ],
 
@@ -226,6 +177,13 @@ const Enquiries: CollectionConfig = {
       name: "source",
       type: "text",
       defaultValue: "website",
+    },
+
+    {
+      name: "consent",
+      label: "Contact Consent",
+      type: "checkbox",
+      defaultValue: false,
     },
 
     {
@@ -669,23 +627,20 @@ const Blogs: CollectionConfig = {
    PAYLOAD CONFIG
 ========================================================= */
 
-const smtpConfiguration = getPayloadSMTPConfiguration(process.env);
-
 export default buildConfig({
+  email: getConfiguredPayloadEmailAdapter(process.env),
   secret: process.env.PAYLOAD_SECRET || "",
-
-  // Stays on Payload's fail-closed console adapter until the owner supplies
-  // all SMTP settings. No real provider or sender credentials are configured.
-  email: smtpConfiguration
-    ? await nodemailerAdapter({ ...smtpConfiguration, skipVerify: true })
-    : undefined,
+  telemetry: false,
 
   /* =====================================================
      MONGODB
   ===================================================== */
 
   db: mongooseAdapter({
-    url: process.env.MONGODB_URI || "",
+    url: resolveNoidaStagingMongoUri(process.env) || "",
+    ...(process.env.NOIDA_LOCAL_STAGING_MODE === "1"
+      ? { connectOptions: { autoIndex: false }, ensureIndexes: false }
+      : {}),
   }),
 
   /* =====================================================

@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { validateMongoTestTarget } from "../../lib/mongodb-test-target.ts";
 
-const TEST_HOSTNAME = "cluster0.oqcardp.mongodb.net";
+const TEST_HOSTNAME = "cluster0.zshxfui.mongodb.net";
 const TEST_DATABASE = "omana-phase5-test-2";
 const dummyCredentials = "test-user:test-password";
 
@@ -28,6 +28,11 @@ test("accepts standard non-security Atlas options and explicit secure TLS", () =
 });
 
 test("rejects another hostname", () => {
+  assert.throws(() =>
+    validateMongoTestTarget(
+      `mongodb+srv://${dummyCredentials}@cluster0.oqcardp.mongodb.net/${TEST_DATABASE}?authSource=admin`,
+    ),
+  );
   assert.throws(() =>
     validateMongoTestTarget(
       `mongodb+srv://${dummyCredentials}@other.example.mongodb.net/${TEST_DATABASE}?authSource=admin`,

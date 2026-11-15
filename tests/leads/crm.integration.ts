@@ -5,10 +5,26 @@ import { dirname, resolve } from "node:path";
 import { parseEnv } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { validateMongoTestTarget } from "../../lib/mongodb-test-target.ts";
+import { validateMongoCrmTestWriterTarget } from "../../lib/mongodb-crm-test-writer-target.ts";
+import { CRM_LEGACY_COLLECTIONS, isRunMarkedSyntheticLegacy, legacyCollectionForForm, type CrmLegacyCollection } from "./crm-legacy-fixtures.ts";
 
 const testEnv = parseEnv(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../../.env.test.local"), "utf8"));
-const { uri: testUri, databaseName, hostname } = validateMongoTestTarget(testEnv.MONGODB_TEST_URI);
+assert.equal(
+  process.env.NOIDA_TEST_DB_WRITE_APPROVAL,
+  "APPROVE_NOIDA_SYNTHETIC_CRM_WRITES",
+  "Explicit one-run TEST database write approval is required",
+);
+assert.notEqual(
+  process.env.CRM_KEEP_TEST_FIXTURES,
+  "1",
+  "CRM fixtures must be cleaned after the approved integration run",
+);
+const { uri: testUri, databaseName, hostname } = validateMongoCrmTestWriterTarget(
+  testEnv.MONGODB_CRM_TEST_WRITER_URI,
+  testEnv.MONGODB_TEST_URI,
+  testEnv.MONGODB_RESTORE_TEST_URI,
+  process.env.MONGODB_URI,
+);
 const mongoUri = new URL(testUri);
 mongoUri.searchParams.set("readPreference", "primary");
 process.env.MONGODB_TEST_URI = testUri;
@@ -45,7 +61,7 @@ assert.equal(new URL(mongoUri).hostname, hostname);
 const runId = randomUUID();
 const marker = `crm-test-${runId}`;
 const createdUsers: string[] = [];
-const createdLegacyIds: Array<{ collection: string; id: string }> = [];
+const createdLegacyIds: Array<{ collection: CrmLegacyCollection; id: string; email: string; source: string }> = [];
 const createdLeadIds: string[] = [];
 let officeId = "";
 let teamId = "";
@@ -56,6 +72,17 @@ let existingUserSnapshots: Array<Record<string, unknown>> = [];
 let baselineCounter: Record<string, unknown> | null = null;
 let baselineSequence = 0;
 
+async function trackLegacyRecord(collection: CrmLegacyCollection, email: string, source: string, id?: string) {
+  const filter = id ? { _id: new mongoose.Types.ObjectId(id) } : { email, source };
+  const records = await db.collection(collection).find(filter).project({ _id: 1, email: 1, name: 1, source: 1 }).toArray();
+  assert.equal(records.length, 1, `${collection} contains exactly one matching synthetic legacy record`);
+  const record = records[0];
+  assert.equal(record.email, email, `${collection} legacy email matches the submitted fixture`);
+  assert.equal(record.source, source, `${collection} legacy source matches the submitted fixture`);
+  assert.ok(isRunMarkedSyntheticLegacy(record, runId), `${collection} legacy record belongs to this synthetic run`);
+  createdLegacyIds.push({ collection, id: String(record._id), email, source });
+}
+
 async function cleanup() {
   if (db) {
     const leadObjectIds = createdLeadIds.map((id) => new mongoose.Types.ObjectId(id));
@@ -64,7 +91,21 @@ async function cleanup() {
       await db.collection("central-leads").deleteMany({ _id: { $in: leadObjectIds } });
     }
     for (const item of createdLegacyIds) {
-      await db.collection(item.collection).deleteOne({ _id: new mongoose.Types.ObjectId(item.id) });
+      const filter = { _id: new mongoose.Types.ObjectId(item.id), email: item.email, source: item.source };
+      const record = await db.collection(item.collection).findOne(filter);
+      if (!record) continue;
+      assert.ok(isRunMarkedSyntheticLegacy(record, runId), "tracked legacy record still has this run's synthetic identity");
+      assert.equal((await db.collection(item.collection).deleteOne(filter)).deletedCount, 1);
+    }
+    // A route can create its legacy record before a later assertion fails and tracking runs.
+    // Sweep only records with this run's unique email prefix, after checking each identity.
+    for (const collection of CRM_LEGACY_COLLECTIONS) {
+      const candidates = await db.collection(collection).find({ email: { $regex: `^${runId}\\.` } }).toArray();
+      for (const record of candidates) {
+        assert.ok(isRunMarkedSyntheticLegacy(record, runId), `${collection} cleanup candidate is synthetic`);
+        const filter = { _id: record._id, email: record.email, source: record.source };
+        assert.equal((await db.collection(collection).deleteOne(filter)).deletedCount, 1);
+      }
     }
     if (ownsTeam && teamId) await db.collection("crm-teams").deleteOne({ _id: new mongoose.Types.ObjectId(teamId) });
     if (createdUsers.length) await db.collection("users").deleteMany({ _id: { $in: createdUsers.map((id) => new mongoose.Types.ObjectId(id)) } });
@@ -89,6 +130,10 @@ async function cleanup() {
       db.collection("users").countDocuments({ _id: { $in: createdUsers.map((id) => new mongoose.Types.ObjectId(id)) } }),
     ]);
     assert.deepEqual(leftovers, [0, 0, 0, 0, 0], "all records created by this synthetic run are removed from TEST");
+    for (const collection of CRM_LEGACY_COLLECTIONS) {
+      assert.equal(await db.collection(collection).countDocuments({ email: { $regex: `^${runId}\\.` } }), 0,
+        `${collection} has zero legacy records for this run`);
+    }
     if (existingUserSnapshots.length && officeId) {
       const officeObjectId = new mongoose.Types.ObjectId(officeId);
       const [retainedLeadCount, retainedCounter] = await Promise.all([
@@ -309,7 +354,7 @@ try {
     overrideAccess: false,
   }), "salespeople cannot change RAG knowledge");
   const legacyLead = await payload.create({ collection: "estate1-enquiries", data: { name: `${marker} Legacy`, email: `${runId}.legacy@example.invalid`, phone: "+919800000001", source: "estate1-popup-form", status: "new" }, overrideAccess: true });
-  createdLegacyIds.push({ collection: "estate1-enquiries", id: String(legacyLead.id) });
+  await trackLegacyRecord("estate1-enquiries", `${runId}.legacy@example.invalid`, "estate1-popup-form", String(legacyLead.id));
   await assert.rejects(() => payload.find({ collection: "estate1-enquiries", user: salespeople[0], overrideAccess: false, limit: 1 }));
   const superAdmin = await payload.create({ collection: "users", data: { email: `${runId}.admin@example.invalid`, password: testPassword, name: `${marker} Super Admin`, role: "super-admin", active: true, eligibleForAssignment: false }, draft: false, overrideAccess: true });
   createdUsers.push(String(superAdmin.id));
@@ -405,7 +450,7 @@ try {
   createdLeadIds.push(String(chatbotLead._id));
   const chatbotLegacy = await db.collection("omana-enquiries").findOne({ idempotencyKey: chatbotKey });
   assert.ok(chatbotLegacy, "existing Omana chatbot lead collection remains populated for compatibility");
-  createdLegacyIds.push({ collection: "omana-enquiries", id: String(chatbotLegacy._id) });
+  await trackLegacyRecord("omana-enquiries", `${runId}.chatbot@example.invalid`, "ai-chatbot", String(chatbotLegacy._id));
 
   const websiteForms: Array<{ label: string; website: string; source: string; consent: boolean; secret: string; post: (request: Request) => Promise<Response>; body: Record<string, unknown> }> = [
     ...(["omana-global-drawer", "omana-project-page"] as const).map((source) => ({
@@ -460,16 +505,21 @@ try {
     assert.equal(Boolean(lead.consentDisclosureVersion), form.consent, `${form.label} disclosure version matches its explicit consent value`);
     assert.equal(String(lead.assignedSalesperson), String(salespeople[(baselineSequence + 44 + index) % 10].id), `${form.label} used the shared round-robin sequence`);
     createdLeadIds.push(String(lead._id));
-    if (lead.legacyCollection && lead.legacyId) createdLegacyIds.push({ collection: String(lead.legacyCollection), id: String(lead.legacyId) });
+    const expectedLegacyCollection = legacyCollectionForForm(form.website, String(form.body.type));
+    if (lead.legacyCollection && lead.legacyId) {
+      assert.equal(lead.legacyCollection, expectedLegacyCollection, `${form.label} references the expected legacy collection`);
+      await trackLegacyRecord(expectedLegacyCollection, String(form.body.email), form.source, String(lead.legacyId));
+    } else {
+      assert.equal(form.website, "omana-projects", `${form.label} must provide central legacy metadata`);
+      await trackLegacyRecord(expectedLegacyCollection, String(form.body.email), form.source);
+    }
   }
 
-  if (process.env.CRM_KEEP_TEST_FIXTURES === "1") {
-    console.log(JSON.stringify({ fixtureRetained: true, marker, database: databaseName, host: hostname, salespersonEmail: `${runId}.sales01@example.invalid`, teamLeaderEmail: `${runId}.leader@example.invalid`, cleanupCommand: "npm run test:crm:cleanup" }));
-  }
+  assert.equal(createdLegacyIds.length, websiteForms.length + 2, "all route, chatbot, and RBAC legacy fixtures are tracked");
 
   console.log(JSON.stringify({ result: "PASS", database: databaseName, host: hostname, createdTestLeads: createdLeadIds.length, syntheticSalespeople: salespeople.length, sequence: "1-10 repeated three times", duplicateRetry: "PASS", samePhoneDistinctLead: "PASS", inactiveSkip: "PASS", unassignedFallback: "PASS", chatbotConsentAndSharedAssignment: "PASS", setupTokenExpiry: "PASS (30 minutes maximum)", setupTokenReplay: "PASS (single-use)", individualWebsiteFormRoutes: websiteForms.length, productionUntouched: true }));
 } finally {
-  if (process.env.CRM_KEEP_TEST_FIXTURES !== "1") await cleanup();
+  await cleanup();
   try {
     await payload.destroy();
   } finally {

@@ -2,9 +2,20 @@
 
 import Link from "next/link";
 import { useAuth } from "@payloadcms/ui";
+import { LuLayoutDashboard } from "react-icons/lu";
+import "./crm-dashboard.css";
 
 export default function CrmNavLink() {
   const { user } = useAuth<{ role?: string }>();
-  if (!user) return null;
-  return <Link href="/admin/crm-dashboard" style={{display:"block",margin:"0 12px 12px",padding:"10px 12px",borderRadius:"6px",background:"linear-gradient(90deg,#7c2d12,#ea580c)",color:"#fff",fontWeight:700,textDecoration:"none"}}>Noida Sales CRM</Link>;
+  if (
+    !user ||
+    (user.role &&
+      !["super-admin", "team-leader", "salesperson"].includes(user.role))
+  )
+    return null;
+  return (
+    <Link href="/admin/crm-dashboard" className="crm-admin-entry">
+      <LuLayoutDashboard aria-hidden="true" /> Noida Sales CRM
+    </Link>
+  );
 }

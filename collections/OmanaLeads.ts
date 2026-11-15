@@ -1,12 +1,7 @@
-import type { Access, CollectionConfig, Field } from "payload";
+import type { CollectionConfig, Field } from "payload";
+import { crmContentHidden, legacyLeadAdminAccess, superAdminOnly } from "../lib/crm/access";
 
-const authenticated: Access = ({ req }) => Boolean(req.user);
-const privateAccess = {
-  create: authenticated,
-  read: authenticated,
-  update: authenticated,
-  delete: authenticated,
-};
+const privateAccess = legacyLeadAdminAccess;
 
 const statusField: Field = {
   name: "status",
@@ -33,6 +28,7 @@ export const OmanaEnquiries: CollectionConfig = {
   admin: {
     useAsTitle: "name",
     group: "Omana Projects",
+    hidden: crmContentHidden,
     defaultColumns: [
       "name",
       "email",
@@ -47,7 +43,7 @@ export const OmanaEnquiries: CollectionConfig = {
       "createdAt",
     ],
   },
-  access: privateAccess,
+  access: { create: privateAccess.create, read: superAdminOnly, update: superAdminOnly, delete: superAdminOnly },
   hooks: {
     beforeChange: [
       ({ context, data, operation, originalDoc }) => {
@@ -209,6 +205,7 @@ export const OmanaSalespeople: CollectionConfig = {
   admin: {
     useAsTitle: "name",
     group: "Omana Projects",
+    hidden: crmContentHidden,
     defaultColumns: ["name", "email", "phone", "active", "rotationOrder", "updatedAt"],
     description:
       "Active salespeople receive new ASK OMANA chatbot leads in rotation order.",
@@ -250,6 +247,7 @@ export const OmanaContactMessages: CollectionConfig = {
   admin: {
     useAsTitle: "name",
     group: "Omana Projects",
+    hidden: crmContentHidden,
     defaultColumns: [
       "name",
       "email",
@@ -284,6 +282,7 @@ export const OmanaGoogleAdsEnquiries: CollectionConfig = {
   admin: {
     useAsTitle: "name",
     group: "Omana Projects",
+    hidden: crmContentHidden,
     defaultColumns: [
       "name",
       "email",

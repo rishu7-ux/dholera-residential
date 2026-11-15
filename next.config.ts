@@ -1,10 +1,15 @@
 import type { NextConfig } from "next";
 import { withPayload } from "@payloadcms/next/withPayload";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const projectRoot = dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   experimental: {
     agentUpgrade: "security",
   },
+  outputFileTracingRoot: projectRoot,
   async redirects() {
     return [
       {

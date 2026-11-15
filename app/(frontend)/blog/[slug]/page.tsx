@@ -18,6 +18,7 @@ import config from "@/payload.config";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import SideEnquiry from "@/components/SideEnquiry";
 
 type Media = {
   id: string;
@@ -123,6 +124,7 @@ export default async function BlogDetailPage({
     <>
       <TopBar />
       <Header />
+      <SideEnquiry />
 
       <main className="min-h-screen bg-[#FFFDFB]">
 
