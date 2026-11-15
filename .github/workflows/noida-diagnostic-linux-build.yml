@@ -279,7 +279,12 @@ jobs:
           scanNative(out);
           let sharp=0;
           for(const p of native){const b=fs.readFileSync(p);if(b.subarray(0,4).toString('hex')!=='7f454c46'||b[4]!==2||b[5]!==1||b.readUInt16LE(18)!==62)throw Error('Non Linux x64 native output');if(p.includes('sharp-linux-x64'))sharp++}
-          console.log('OUTPUT_NATIVE_EVIDENCE',JSON.stringify({payload_trace_native:tracedNative.length,output_native:native.length,sharp_linux_x64:sharp}));
+          const functionSummary=funcs.map(configPath=>{
+            const dir=path.dirname(configPath),relative=path.relative(out,dir),prefix=dir+path.sep;
+            const packaged=files.filter(p=>p.startsWith(prefix));
+            return {function:relative,files:packaged.length,sharp_paths:packaged.filter(p=>/sharp|libvips/.test(p)).map(p=>path.relative(dir,p)),archives:packaged.filter(p=>/\.(zip|tar)$/.test(p)).map(p=>path.relative(dir,p))};
+          });
+          console.log('OUTPUT_NATIVE_EVIDENCE',JSON.stringify({payload_trace_native:tracedNative.length,output_native:native.length,sharp_linux_x64:sharp,output_roots:fs.readdirSync(out),functions:functionSummary.filter(x=>/api|image|payload/i.test(x.function))}));
           if(!sharp)throw Error('Payload-required Linux Sharp absent from packaged output');
           // Output routing equivalence must additionally be reviewed against
           // config.routes rewrites/function routing before release readiness.
