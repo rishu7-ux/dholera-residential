@@ -38,6 +38,21 @@ export type PreviewMongoDiagnosticTarget = {
   deploymentId: string;
 };
 
+// Some runtimes expose an empty POST as a non-null stream. Check for actual
+// bytes so a bodyless request remains valid while any supplied body is denied.
+export async function requestHasBodyBytes(body: ReadableStream<Uint8Array> | null): Promise<boolean> {
+  if (!body) return false;
+  const reader = body.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) return false;
+    if (value?.byteLength) {
+      await reader.cancel().catch(() => undefined);
+      return true;
+    }
+  }
+}
+
 export function previewMongoDiagnosticBody(
   target: PreviewMongoDiagnosticTarget,
   result: { ping: "PASS"; connectedDatabase: string } | { ping: "FAIL"; connectedDatabase: null },

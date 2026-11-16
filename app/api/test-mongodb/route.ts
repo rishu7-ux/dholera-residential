@@ -6,6 +6,7 @@ import {
   authorizePreviewMongoDiagnostic,
   PreviewMongoDiagnosticGuardError,
   previewMongoDiagnosticBody,
+  requestHasBodyBytes,
 } from "@/lib/noida-preview-mongodb-diagnostic";
 
 export const runtime = "nodejs";
@@ -22,7 +23,11 @@ export async function POST(request: Request) {
   let target;
   try {
     target = authorizePreviewMongoDiagnostic(
-      { url: request.url, authorization: request.headers.get("authorization"), hasBody: request.body !== null },
+      {
+        url: request.url,
+        authorization: request.headers.get("authorization"),
+        hasBody: await requestHasBodyBytes(request.body),
+      },
       process.env,
     );
   } catch (error) {

@@ -6,6 +6,7 @@ import {
   authorizePreviewMongoDiagnostic,
   PreviewMongoDiagnosticGuardError,
   previewMongoDiagnosticBody,
+  requestHasBodyBytes,
 } from "../../lib/noida-preview-mongodb-diagnostic";
 
 const token = "a".repeat(43);
@@ -28,6 +29,20 @@ const request = {
   authorization: `Bearer ${token}`,
   hasBody: false,
 };
+
+test("bodyless POST streams are accepted, supplied bytes are rejected", async () => {
+  assert.equal(await requestHasBodyBytes(null), false);
+  const empty = new ReadableStream<Uint8Array>({ start(controller) { controller.close(); } });
+  assert.equal(await requestHasBodyBytes(empty), false);
+  const supplied = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array(0));
+      controller.enqueue(new Uint8Array([1]));
+      controller.close();
+    },
+  });
+  assert.equal(await requestHasBodyBytes(supplied), true);
+});
 
 test("Master CMS diagnostic permits only its own protected Preview TEST identity", () => {
   const id = "prj_BaMZLgjsftAewYTezNLEV0zG5v7A";
