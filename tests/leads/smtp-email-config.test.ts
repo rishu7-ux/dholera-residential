@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { nodemailerAdapter } from "@payloadcms/email-nodemailer";
-
+import type { SendEmailOptions } from "payload";
+import { createPayloadSMTPAdapter } from "../../lib/crm/smtp-email-adapter.ts";
 import { getPayloadSMTPConfiguration } from "../../lib/crm/smtp-email-config.ts";
 
 test("SMTP configuration is absent until the owner configures a sender and host", () => {
@@ -63,7 +63,7 @@ test("SMTP port 465 selects implicit TLS; insecure TLS settings are rejected", (
   }), /hostname/);
 });
 
-test("Payload Nodemailer adapter sends invitation mail only through a fake transport in tests", async () => {
+test("Payload SMTP adapter sends invitation mail only through a fake transport in tests", async () => {
   const configuration = getPayloadSMTPConfiguration({
     SMTP_HOST: "smtp.example.invalid",
     SMTP_PORT: "587",
@@ -74,16 +74,12 @@ test("Payload Nodemailer adapter sends invitation mail only through a fake trans
 
   const messages: Array<Record<string, unknown>> = [];
   const fakeTransport = {
-    async sendMail(message: Record<string, unknown>) {
-      messages.push(message);
-      return { messageId: "test-message-only" };
+    async sendMail(message: SendEmailOptions) {
+      messages.push(message as unknown as Record<string, unknown>);
+      return { accepted: ["salesperson@example.invalid"], rejected: [] };
     },
   };
-  const adapter = await nodemailerAdapter({
-    ...configuration,
-    transport: fakeTransport as never,
-    skipVerify: true,
-  });
+  const adapter = createPayloadSMTPAdapter(configuration, () => fakeTransport);
   const { sendEmail } = adapter({ payload: {} as never });
 
   await sendEmail({
@@ -94,6 +90,6 @@ test("Payload Nodemailer adapter sends invitation mail only through a fake trans
 
   assert.equal(messages.length, 1);
   assert.equal(messages[0]?.to, "salesperson@example.invalid");
-  assert.equal(messages[0]?.from, "Synthetic CMS <no-reply@example.invalid>");
+  assert.deepEqual(messages[0]?.from, { name: "Synthetic CMS", address: "no-reply@example.invalid" });
   assert.equal(String(messages[0]?.html).includes("synthetic-token"), true);
 });
