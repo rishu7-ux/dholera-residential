@@ -26,21 +26,22 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
-    "@payloadcms/db-mongodb": "^3.88.0",
-    "@payloadcms/email-nodemailer": "3.88.0",
-    "@payloadcms/next": "^3.88.0",
-    "@payloadcms/richtext-lexical": "3.88.0",
-    "@payloadcms/storage-vercel-blob": "^3.88.0",
+    "@payloadcms/db-mongodb": "3.90.2",
+    "@payloadcms/next": "3.90.2",
+    "@payloadcms/richtext-lexical": "3.90.2",
+    "@payloadcms/storage-vercel-blob": "3.90.2",
     "@qdrant/js-client-rest": "^1.19.0",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/blob": "2.8.0",
     "@vercel/speed-insights": "^2.0.0",
     "axios": "^1.20.0",
     "cheerio": "^1.2.0",
     "framer-motion": "^12.43.0",
     "mongoose": "^9.9.2",
     "next": "16.4.5",
+    "nodemailer": "10.1.7",
     "openai": "^7.28.0",
-    "payload": "^3.88.0",
+    "payload": "3.90.2",
     "react": "19.2.4",
     "react-countup": "^6.5.3",
     "react-dom": "19.2.4",
@@ -56,9 +57,13 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.12",
+    "eslint-config-next": "16.4.5",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"
+  },
+  "overrides": {
+    "dompurify": "3.4.17",
+    "undici@7.29.0": "7.29.1"
   }
 }

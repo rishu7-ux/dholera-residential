@@ -1,6 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useAuth } from "@payloadcms/ui";
 
 export default function Estate2NavLink() {
+  const { user } = useAuth<{ role?: string }>();
+  if (user?.role === "salesperson" || user?.role === "team-leader") return null;
   return (
     <Link
       href="/admin/estate-2-dashboard"

@@ -174,11 +174,11 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: string;
-  role: 'super-admin' | 'team-leader' | 'salesperson';
-  name: string;
+  role?: ('super-admin' | 'team-leader' | 'salesperson') | null;
+  name?: string | null;
   office?: (string | null) | CrmOffice;
-  active: boolean;
-  eligibleForAssignment: boolean;
+  active?: boolean | null;
+  eligibleForAssignment?: boolean | null;
   rotationOrder?: number | null;
   team?: (string | null) | CrmTeam;
   updatedAt: string;
@@ -188,6 +188,7 @@ export interface User {
   resetPasswordExpiration?: string | null;
   salt?: string | null;
   hash?: string | null;
+  resetPasswordRequestedAt?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   sessions?:
@@ -235,7 +236,13 @@ export interface CentralLead {
   name: string;
   email?: string | null;
   phone: string;
-  website: 'omana-projects' | 'dholera-estate-1' | 'dholera-estate-2' | 'dholeraestates' | 'dholeraindustrial';
+  website:
+    | 'omana-projects'
+    | 'dholera-residential'
+    | 'dholera-estate-1'
+    | 'dholera-estate-2'
+    | 'dholeraestates'
+    | 'dholeraindustrial';
   leadType: 'enquiry' | 'contact' | 'google-ads' | 'chatbot';
   source: string;
   project?: string | null;
@@ -306,6 +313,7 @@ export interface Enquiry {
   property?: string | null;
   message?: string | null;
   source?: string | null;
+  consent?: boolean | null;
   status?: ('new' | 'contacted' | 'follow-up' | 'qualified' | 'closed') | null;
   updatedAt: string;
   createdAt: string;
@@ -1017,6 +1025,7 @@ export interface UsersSelect<T extends boolean = true> {
   resetPasswordExpiration?: T;
   salt?: T;
   hash?: T;
+  resetPasswordRequestedAt?: T;
   loginAttempts?: T;
   lockUntil?: T;
   sessions?:
@@ -1093,6 +1102,7 @@ export interface CentralLeadsSelect<T extends boolean = true> {
 export interface CrmActivitiesSelect<T extends boolean = true> {
   lead?: T;
   office?: T;
+  team?: T;
   assignedSalesperson?: T;
   actor?: T;
   event?: T;
@@ -1111,6 +1121,7 @@ export interface EnquiriesSelect<T extends boolean = true> {
   property?: T;
   message?: T;
   source?: T;
+  consent?: T;
   status?: T;
   updatedAt?: T;
   createdAt?: T;

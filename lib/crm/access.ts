@@ -4,7 +4,7 @@ export type CrmRole = "super-admin" | "team-leader" | "salesperson";
 
 type CrmUser = {
   id?: string | number;
-  role?: CrmRole | string;
+  role?: CrmRole | string | null;
   office?: string | number | { id?: string | number } | null;
   team?: string | number | { id?: string | number } | null;
 };
@@ -22,6 +22,36 @@ export function relationshipId(value: unknown) {
 // Accounts created before CRM roles were introduced retain the established CMS admin role.
 export const isSuperAdmin = (user: CrmUser | null | undefined) =>
   Boolean(user && (!user.role || user.role === "super-admin"));
+
+/** Give new accounts explicit CRM fields without backfilling legacy CMS admins on read or update. */
+export function prepareNewCrmUser(data: Record<string, unknown> | undefined) {
+  const name = typeof data?.name === "string" ? data.name.trim() : "";
+  if (!name) throw new Error("A name is required for a new CMS user");
+
+  const role = data?.role == null || data.role === "" ? "salesperson" : data.role;
+  if (role !== "super-admin" && role !== "team-leader" && role !== "salesperson") {
+    throw new Error("Invalid CRM user role");
+  }
+
+  const active = data?.active == null ? true : data.active;
+  const eligibleForAssignment = data?.eligibleForAssignment == null ? true : data.eligibleForAssignment;
+  if (typeof active !== "boolean" || typeof eligibleForAssignment !== "boolean") {
+    throw new Error("CRM user status must be a checkbox value");
+  }
+
+  return { ...data, name, role, active, eligibleForAssignment };
+}
+
+/** A CRM account must not become a legacy, roleless CMS administrator on update. */
+export function preserveCrmUserRole(
+  data: Record<string, unknown> | undefined,
+  originalDoc: Record<string, unknown> | undefined,
+) {
+  if (originalDoc?.role && data && Object.hasOwn(data, "role") && !data.role) {
+    throw new Error("An existing CRM user role cannot be cleared");
+  }
+  return data;
+}
 
 export const authenticated: Access = ({ req }) => Boolean(req.user);
 
@@ -50,18 +80,18 @@ export const crmOfficeRead: Access = ({ req }) => {
   return office ? ({ id: { equals: office } } as Where) : false;
 };
 
-async function assignedTeamScope(
+export async function assignedTeamScope(
   user: CrmUser,
   payload: Pick<Payload, "find">,
-): Promise<Where | false> {
+): Promise<{ teamId: string; where: Where } | false> {
   const office = relationshipId(user.office);
   const team = relationshipId(user.team);
-  if (!user.id || user.role !== "team-leader" || !office || !team) return false;
+  if (!user.id || user.role !== "team-leader" || !office) return false;
   const assignedTeam = await payload.find({
     collection: "crm-teams",
     where: {
       and: [
-        { id: { equals: team } },
+        ...(team ? [{ id: { equals: team } }] : []),
         { office: { equals: office } },
         { teamLeader: { equals: String(user.id) } },
         { active: { equals: true } },
@@ -71,21 +101,32 @@ async function assignedTeamScope(
     limit: 2,
     overrideAccess: true,
   });
-  if (assignedTeam.docs.length !== 1) return false;
+  if (assignedTeam.totalDocs !== 1 || assignedTeam.docs.length !== 1) return false;
+  const teamId = String(assignedTeam.docs[0].id);
   return {
-    and: [
+    teamId,
+    where: { and: [
       { office: { equals: office } },
-      { team: { equals: team } },
-    ],
-  } as Where;
+      { team: { equals: teamId } },
+    ] } as Where,
+  };
 }
 
 export const crmTeamRead: Access = ({ req }) => {
   const user = req.user as CrmUser | null;
   if (!user) return false;
   if (isSuperAdmin(user)) return true;
-  if (user.role !== "team-leader" || !user.id) return false;
-  return assignedTeamScope(user, req.payload);
+  const office = relationshipId(user.office);
+  const team = relationshipId(user.team);
+  if (user.role !== "team-leader" || !user.id || !office) return false;
+  return {
+    and: [
+      ...(team ? [{ id: { equals: team } }] : []),
+      { office: { equals: office } },
+      { teamLeader: { equals: String(user.id) } },
+      { active: { equals: true } },
+    ],
+  } as Where;
 };
 
 export const crmUserRead: Access = async ({ req }) => {
@@ -98,21 +139,13 @@ export const crmUserRead: Access = async ({ req }) => {
   if (user.role !== "team-leader" || !user.id) return false;
   const scope = await assignedTeamScope(user, req.payload);
   if (!scope) return false;
-  const team = relationshipId(user.team);
   return {
-    and: [
-      scope,
-      {
-        or: [
-          { id: { equals: String(user.id) } },
-          {
-            and: [
-              { role: { equals: "salesperson" } },
-              { team: { equals: team } },
-            ],
-          },
-        ],
-      },
+    or: [
+      { id: { equals: String(user.id) } },
+      { and: [
+        { role: { equals: "salesperson" } },
+        scope.where,
+      ] },
     ],
   } as Where;
 };
@@ -122,10 +155,17 @@ export const crmLeadRead: Access = async ({ req }) => {
   if (!user) return false;
   if (isSuperAdmin(user)) return true;
   if (user.role === "team-leader") {
-    return assignedTeamScope(user, req.payload);
+    const scope = await assignedTeamScope(user, req.payload);
+    return scope ? scope.where : false;
   }
   if (user.role === "salesperson") {
-    return user.id ? ({ assignedSalesperson: { equals: String(user.id) } } as Where) : false;
+    const office = relationshipId(user.office);
+    const team = relationshipId(user.team);
+    return user.id && office && team ? ({ and: [
+      { office: { equals: office } },
+      { team: { equals: team } },
+      { assignedSalesperson: { equals: String(user.id) } },
+    ] } as Where) : false;
   }
   return false;
 };
@@ -135,12 +175,17 @@ export const crmActivityRead: Access = async ({ req }) => {
   const user = req.user as CrmUser | null;
   if (!user) return false;
   if (isSuperAdmin(user)) return true;
-  if (user.role === "team-leader") return assignedTeamScope(user, req.payload);
+  if (user.role === "team-leader") {
+    const scope = await assignedTeamScope(user, req.payload);
+    return scope ? scope.where : false;
+  }
   if (user.role === "salesperson") {
     const office = relationshipId(user.office);
-    return user.id && office
+    const team = relationshipId(user.team);
+    return user.id && office && team
       ? ({ and: [
           { office: { equals: office } },
+          { team: { equals: team } },
           { assignedSalesperson: { equals: String(user.id) } },
         ] } as Where)
       : false;

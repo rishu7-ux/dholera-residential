@@ -39,6 +39,7 @@ const formSchema = z.object({
       /^[0-9]{10}$/,
       "Enter a valid 10-digit mobile number"
     ),
+  consent: z.boolean().refine((value) => value === true, "Please agree before submitting"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -51,6 +52,7 @@ export default function SideEnquiry() {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [submissionKey, setSubmissionKey] = useState<string | null>(null);
 
   const {
     register,
@@ -68,6 +70,7 @@ export default function SideEnquiry() {
       name: "",
       email: "",
       phone: "",
+      consent: false,
     },
 
     mode: "onSubmit",
@@ -106,13 +109,15 @@ export default function SideEnquiry() {
     try {
       setServerError("");
 
-      console.log("Submitting enquiry:", data);
+      const key = submissionKey ?? crypto.randomUUID();
+      setSubmissionKey(key);
 
       const response = await fetch("/api/enquiries", {
         method: "POST",
 
         headers: {
           "Content-Type": "application/json",
+          "x-idempotency-key": key,
         },
 
         body: JSON.stringify({
@@ -125,12 +130,13 @@ export default function SideEnquiry() {
 
           // current form does not have message field
           message: "",
+          source: "side-enquiry-form",
+          consent: data.consent,
         }),
       });
 
       const result = await response.json();
 
-      console.log("API response:", result);
 
       if (!response.ok) {
         throw new Error(
@@ -139,16 +145,13 @@ export default function SideEnquiry() {
         );
       }
 
-      console.log(
-        "✅ Enquiry successfully saved in MongoDB"
-      );
+      setSubmissionKey(null);
 
       reset();
 
       // Show existing thank-you screen
       setSubmitted(true);
     } catch (error) {
-      console.error("❌ Enquiry error:", error);
 
       const message =
         error instanceof Error
@@ -757,6 +760,12 @@ export default function SideEnquiry() {
                         </div>
 
                         {/* SERVER ERROR */}
+
+                        <label className="flex items-start gap-2 text-[10px] text-[#081A3A]">
+                          <input type="checkbox" {...register("consent")} className="mt-0.5 accent-[#FF7A00]" />
+                          I agree to be contacted about my property enquiry.
+                        </label>
+                        {errors.consent && <p className="text-[9px] text-red-500">{errors.consent.message}</p>}
 
                         {serverError && (
                           <motion.div

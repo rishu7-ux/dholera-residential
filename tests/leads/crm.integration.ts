@@ -141,8 +141,8 @@ try {
 
   testPassword = randomBytes(36).toString("base64url");
   let office: { id: string };
-  let teamLeader: { id: string; email: string; role?: string };
-  let salespeople: Array<{ id: string; email: string; role?: string }>;
+  let teamLeader: { id: string; email: string; role?: string | null };
+  let salespeople: Array<{ id: string; email: string; role?: string | null }>;
 
   if (existingOffice && existingTeam) {
     office = await payload.findByID({ collection: "crm-offices", id: String(existingOffice._id), overrideAccess: true });
@@ -249,7 +249,7 @@ try {
   }
   assert.deepEqual(assigned, expected, "30 mixed-source leads follow exact 1-to-10 rotation three times");
 
-  const salespersonLoginUsers: Array<{ id: string; role?: string }> = [];
+  const salespersonLoginUsers: Array<{ id: string; role?: string | null }> = [];
   for (let index = 0; index < 10; index += 1) {
     const login = await payload.login({ collection: "users", data: { email: salespeople[index].email, password: testPassword } });
     assert.ok(login.user);

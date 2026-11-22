@@ -1,10 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
 
-import { getPayload } from "payload";
 import { z } from "zod";
 
-import config from "../../../payload.config";
-import { ingestCentralLead } from "../../../lib/crm/ingest";
+import { ingestLeadWithLegacy } from "../../../lib/crm/ingest";
 
 const enquirySchema = z.object({
   type: z.literal("enquiry"),
@@ -19,6 +17,7 @@ const enquirySchema = z.object({
     "industrial-property-card",
     "industrial-website",
   ]),
+  consent: z.literal(true),
 });
 
 const contactSchema = z.object({
@@ -70,14 +69,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const payload = await getPayload({ config });
     const data = result.data;
 
-    let legacyId: string | number;
-    if (data.type === "enquiry") {
-      const created = await payload.create({
-        collection: "industrial-enquiries",
-        data: {
+    const legacyCollection = data.type === "enquiry" ? "industrial-enquiries" : "industrial-contact-messages";
+    const legacyData = data.type === "enquiry"
+      ? {
           name: data.name,
           email: data.email,
           phone: data.phone,
@@ -85,13 +81,8 @@ export async function POST(request: Request) {
           message: data.message,
           source: data.source,
           status: "new",
-        },
-      });
-      legacyId = created.id;
-    } else {
-      const created = await payload.create({
-        collection: "industrial-contact-messages",
-        data: {
+        }
+      : {
           name: data.name,
           email: data.email,
           phone: data.phone,
@@ -101,22 +92,24 @@ export async function POST(request: Request) {
           consent: data.consent,
           source: data.source,
           status: "new",
-        },
-      });
-      legacyId = created.id;
-    }
-
-    await ingestCentralLead({
-      name: data.name, email: data.email, phone: data.phone,
-      website: "dholeraindustrial", leadType: data.type, source: data.source,
+        };
+    const ingress = await ingestLeadWithLegacy({
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      website: "dholeraindustrial",
+      leadType: data.type,
+      source: data.source,
       project: data.type === "enquiry" ? data.property : data.propertyType,
       message: data.type === "enquiry" ? data.message : data.comments,
       budget: data.type === "contact" ? data.budget : undefined,
-      consent: data.type === "contact" ? data.consent : false,
+      consent: data.consent,
       idempotencyKey: request.headers.get("x-idempotency-key") || undefined,
-      legacyCollection: data.type === "enquiry" ? "industrial-enquiries" : "industrial-contact-messages",
-      legacyId,
-    });
+    }, { collection: legacyCollection, data: legacyData });
+
+    if (ingress.duplicate) {
+      return Response.json({ success: true, duplicate: true }, { status: 200 });
+    }
 
     return Response.json({ success: true, message: "Lead saved successfully" }, { status: 201 });
   } catch (error) {

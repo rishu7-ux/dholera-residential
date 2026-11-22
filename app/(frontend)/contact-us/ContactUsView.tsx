@@ -1228,9 +1228,8 @@ export default function ContactUsView() {
                           />
 
                           <span>
-                            I agree to use my information
-                            for enquiry and marketing
-                            communication.
+                            I agree that Omana Projects may use my contact details to respond to this property enquiry by phone, WhatsApp or email. See the{" "}
+                            <a href="https://omanaprojects.com/privacy-policy">Privacy Policy</a>.
                           </span>
                         </label>
 

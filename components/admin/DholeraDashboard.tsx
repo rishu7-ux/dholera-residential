@@ -1,4 +1,6 @@
 import type { WidgetServerProps } from "payload";
+import Link from "next/link";
+import { isSuperAdmin } from "../../lib/crm/access";
 
 /* =========================================================
    TYPES
@@ -30,6 +32,9 @@ export default async function DholeraDashboard({
   req,
 }: WidgetServerProps) {
   const { payload } = req;
+  if (!isSuperAdmin(req.user as { role?: "super-admin" | "team-leader" | "salesperson" } | null)) {
+    return <div className="dholera-dashboard"><h2>Sales CRM</h2><Link href="/admin/crm-dashboard">Open your assigned office dashboard</Link></div>;
+  }
 
   /* =========================================================
      TODAY RANGE
