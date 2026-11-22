@@ -80,9 +80,13 @@ export function resolveNoidaStagingMongoUri(env: StagingEnvironment): string | u
   const mode = env.NOIDA_STAGING_MODE;
   const projectId = env.NOIDA_STAGING_PROJECT_ID;
   const deployedProjectId = env.VERCEL_PROJECT_ID;
-  const masterPreview = deployedProjectId === MASTER_PREVIEW_PROJECT_ID && env.VERCEL_ENV === "preview";
-  if (mode === undefined && projectId === undefined && deployedProjectId !== STAGING_PROJECT_ID && !masterPreview) {
-    return env.MONGODB_URI;
+  if (mode === undefined && projectId === undefined) {
+    // Never infer Production from missing Preview identity variables. A
+    // Production URI is permitted only for this verified Master CMS deployment.
+    if (env.VERCEL === "1" && env.VERCEL_ENV === "production" && deployedProjectId === MASTER_PREVIEW_PROJECT_ID) {
+      return env.MONGODB_URI;
+    }
+    throw new Error("MongoDB target requires a verified Production or TEST deployment identity");
   }
 
   if (mode !== "1" || !projectId || !STAGING_PROJECT_IDS.has(projectId)) {
