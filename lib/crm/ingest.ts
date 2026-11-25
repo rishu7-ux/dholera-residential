@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import mongoose from "mongoose";
 
 import connectDB from "../mongodb";
-import { assignmentSource, queueAssignmentNotification } from "./assignment-notification";
 
 export type CentralLeadInput = {
   name: string;
@@ -24,6 +23,7 @@ export type CentralLeadInput = {
 
 const NOIDA_CODE = "noida";
 const COUNTER_KEY = "noida-shared-lead-round-robin";
+const OFFICE_ALTERNATION_KEY = "crm-shared-office-alternation";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const LEGACY_COLLECTIONS: Record<CentralLeadInput["website"], Partial<Record<CentralLeadInput["leadType"], string>>> = {
@@ -144,8 +144,11 @@ async function ingestCentralLeadInternal(input: CentralLeadInput, testHooks: Ing
   const existing = await db.collection("central-leads").findOne({ idempotencyKey });
   if (existing) return existingResult(existing, db, input, legacy);
 
-  const session = await mongoose.connection.startSession();
-  try {
+  // A concurrent first use can race while creating the new office counter.
+  // Its unique-index collision aborts the whole transaction, so retry safely.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const session = await mongoose.connection.startSession();
+    try {
     let result: IngestResult | undefined;
     await session.withTransaction(async () => {
       const duplicate = await db.collection("central-leads").findOne({ idempotencyKey }, { session });
@@ -171,8 +174,25 @@ async function ingestCentralLeadInternal(input: CentralLeadInput, testHooks: Ing
         { $setOnInsert: { _id: new mongoose.Types.ObjectId(), code: NOIDA_CODE, name: "Noida", active: true, createdAt: new Date(), updatedAt: new Date() } },
         { upsert: true, returnDocument: "after", session },
       );
-      const office = officeResult;
-      if (!office || office.active === false) throw new Error("Noida CRM office is inactive");
+      const noidaOffice = officeResult;
+      if (!noidaOffice || noidaOffice.active === false) throw new Error("Noida CRM office is inactive");
+
+      const ahmedabadOffices = await db.collection("crm-offices")
+        .find({ active: true, code: /^\s*ahmedabad\s*$/i }, { session }).limit(2).toArray();
+      if (ahmedabadOffices.length > 1) throw new Error("Ahmedabad CRM office is ambiguous");
+      let office = noidaOffice;
+      if (ahmedabadOffices.length === 1) {
+        // The compound unique key serializes concurrent office turns. This advance,
+        // the office-specific assignment advance, and the lead commit together.
+        const officeTurn = await db.collection("crm-assignment-counters").findOneAndUpdate(
+          { key: OFFICE_ALTERNATION_KEY, office: noidaOffice._id },
+          { $inc: { sequence: 1 }, $setOnInsert: { createdAt: now }, $set: { updatedAt: now } },
+          { upsert: true, returnDocument: "after", session },
+        );
+        const turn = Number(officeTurn?.sequence);
+        if (!Number.isSafeInteger(turn) || turn < 1) throw new Error("CRM office turn is invalid");
+        if (turn % 2 === 0) office = ahmedabadOffices[0];
+      }
 
       const salespeople = await db.collection("users").find({
         role: "salesperson",
@@ -212,7 +232,7 @@ async function ingestCentralLeadInternal(input: CentralLeadInput, testHooks: Ing
         assignedSalesperson: salesperson?._id,
         assignedAt: salesperson ? now : undefined,
         assignmentSequence: sequence,
-        unassignedReason: salesperson ? undefined : "No active salesperson is configured for the Noida office.",
+        unassignedReason: salesperson ? undefined : `No active salesperson is configured for the ${String(office.name || office.code)} office.`,
         status: "new",
         createdAt: now,
         updatedAt: now,
@@ -231,31 +251,25 @@ async function ingestCentralLeadInternal(input: CentralLeadInput, testHooks: Ing
           details: { sequence, mode: "automatic-round-robin" }, createdAt: now, updatedAt: now,
         }] : []),
       ], { session });
-      if (salesperson && process.env.NOIDA_ASSIGNMENT_EMAIL_ENABLED === "1") {
-        await queueAssignmentNotification(db, session, {
-          lead: leadId,
-          salesperson: salesperson._id,
-          source: assignmentSource(input.website, input.leadType, input.source),
-          assignedAt: now,
-        });
-      }
       result = { id: String(leadId), duplicate: false, assigned: Boolean(salesperson), ...(legacyId ? { legacyId: String(legacyId) } : {}) };
     });
     if (!result) throw new Error("CRM lead transaction did not complete");
     return result;
-  } catch (error) {
-    if ((error as { code?: number }).code === 11000) {
-      const duplicate = await db.collection("central-leads").findOne({ idempotencyKey });
-      if (duplicate) return existingResult(duplicate, db, input, legacy);
-    }
-    throw error;
-  } finally {
-    // The transaction outcome is already known here. A cleanup failure must not
-    // turn a committed lead into a retryable HTTP error.
-    try {
-      await session.endSession();
-    } catch {
-      console.error("CRM session cleanup failed");
+    } catch (error) {
+      if ((error as { code?: number }).code === 11000) {
+        const duplicate = await db.collection("central-leads").findOne({ idempotencyKey });
+        if (duplicate) return existingResult(duplicate, db, input, legacy);
+        if (attempt < 2) continue;
+      }
+      throw error;
+    } finally {
+      // A cleanup failure must not turn a committed lead into a retryable HTTP error.
+      try {
+        await session.endSession();
+      } catch {
+        console.error("CRM session cleanup failed");
+      }
     }
   }
+  throw new Error("CRM lead transaction retries exhausted");
 }

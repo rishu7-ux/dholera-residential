@@ -1,7 +1,7 @@
 import type { AdminViewServerProps } from "payload";
 import Link from "next/link";
 import CrmDashboardClient from "./CrmDashboardClient";
-import { isSuperAdmin } from "../../lib/crm/access";
+import { isSuperAdmin, relationshipId } from "../../lib/crm/access";
 import { requestedCrmOfficeFromURL, selectCrmOffice } from "../../lib/crm/office-scope";
 import { dashboardTeamAuthorized, selectDashboardRoster } from "../../lib/crm/dashboard-roster";
 
@@ -105,23 +105,22 @@ export default async function CrmDashboard({
     team,
     people: people?.docs ?? [],
   });
-  const contactCount =
-    user.role === "salesperson"
-      ? 0
-      : (
-          await payload.count({
-            collection: "central-leads",
-            where: {
-              and: [
-                { office: { equals: office.id } },
-                { leadType: { equals: "contact" } },
-                ...(team ? [{ team: { equals: team.id } }] : []),
-              ],
-            },
-            overrideAccess: false,
-            req: initPageResult.req,
-          })
-        ).totalDocs;
+  const teamId = team ? String(team.id) : user.role === "salesperson" ? relationshipId(user.team) : "";
+  const contactCount = (
+    await payload.count({
+      collection: "central-leads",
+      where: {
+        and: [
+          { office: { equals: office.id } },
+          { leadType: { equals: "contact" } },
+          ...(teamId ? [{ team: { equals: teamId } }] : []),
+          ...(user.role === "salesperson" ? [{ assignedSalesperson: { equals: user.id } }] : []),
+        ],
+      },
+      overrideAccess: false,
+      req: initPageResult.req,
+    })
+  ).totalDocs;
   const activities = await payload.find({
     collection: "crm-activities",
     where:
@@ -171,6 +170,8 @@ export default async function CrmDashboard({
   return (
     <CrmDashboardClient
       officeId={String(office.id)}
+      teamId={teamId}
+      userId={String(user.id)}
       officeCode={office.code?.trim().toLowerCase() === "ahmedabad" ? "ahmedabad" : "noida"}
       officeName={office.name || (requested === "ahmedabad" ? "Ahmedabad" : "Noida")}
       role={

@@ -48,6 +48,7 @@ export function resolveNoidaStagingMongoUri(env: StagingEnvironment): string | u
     if (
       env.PAYLOAD_DROP_DATABASE !== undefined ||
       env.NOIDA_ASSIGNMENT_EMAIL_ENABLED === "1" ||
+      env.CRM_EMAIL_NOTIFICATIONS_ENABLED === "1" ||
       (env.NOIDA_SMTP_DELIVERY_ENABLED !== undefined && env.NOIDA_SMTP_DELIVERY_ENABLED !== "0") ||
       env.BLOB_READ_WRITE_TOKEN !== undefined ||
       env.OPENAI_API_KEY !== undefined ||
@@ -97,6 +98,9 @@ export function resolveNoidaStagingMongoUri(env: StagingEnvironment): string | u
   }
   if (env.NOIDA_SMTP_DELIVERY_ENABLED !== "0") {
     throw new Error("Noida staging requires outbound SMTP delivery disabled");
+  }
+  if (env.CRM_EMAIL_NOTIFICATIONS_ENABLED === "1") {
+    throw new Error("Noida staging requires CRM email notifications disabled");
   }
 
   validateStagingMongoUri(env);

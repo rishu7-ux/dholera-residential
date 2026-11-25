@@ -14,6 +14,7 @@ import {
   LuDownload,
   LuFilter,
   LuLayoutDashboard,
+  LuLogOut,
   LuMail,
   LuMenu,
   LuSearch,
@@ -24,6 +25,8 @@ import {
 } from "react-icons/lu";
 import type { IconType } from "react-icons";
 import type { ReportPeriod } from "../../lib/crm/report-core";
+import { crmKpiCollectionURL, leadRowsForKpi, type LeadKpiView } from "../../lib/crm/dashboard-kpi";
+import { endCrmSession, isCurrentCrmSession } from "../../lib/crm/dashboard-session";
 import "./crm-dashboard.css";
 
 type Role = "super-admin" | "team-leader" | "salesperson";
@@ -60,6 +63,8 @@ type Filters = {
 };
 type Props = {
   officeId: string;
+  teamId: string;
+  userId: string;
   officeCode: "noida" | "ahmedabad";
   officeName: string;
   role: Role;
@@ -140,6 +145,15 @@ const statusLabels: Record<string, string> = {
   qualified: "Qualified",
   converted: "Converted",
   lost: "Lost",
+};
+const kpiViewLabels: Record<LeadKpiView, string> = {
+  total: "Total leads",
+  today: "Today's leads",
+  new: "New leads",
+  converted: "Converted leads",
+  pending: "Pending follow-ups",
+  overdue: "Overdue follow-ups",
+  conversion: "Converted leads behind the conversion rate",
 };
 const chartColors = [
   "#ff6b00",
@@ -229,6 +243,8 @@ function statusCount(summary: Summary, status: string) {
 
 export default function CrmDashboardClient({
   officeId,
+  teamId,
+  userId,
   officeCode,
   officeName,
   role,
@@ -241,6 +257,7 @@ export default function CrmDashboardClient({
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [report, setReport] = useState<Report | null>(null);
   const [todayReport, setTodayReport] = useState<Report | null>(null);
+  const [reportAsOf, setReportAsOf] = useState(0);
   const [performance, setPerformance] = useState<Performance[]>([]);
   const [performanceError, setPerformanceError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -254,15 +271,16 @@ export default function CrmDashboardClient({
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<"newest" | "oldest" | "name">("newest");
   const [page, setPage] = useState(1);
+  const [kpiView, setKpiView] = useState<LeadKpiView | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
     const dailyFilters: Filters = { ...initialFilters, period: "daily" };
     Promise.all([
       getReport(filters, officeCode, controller.signal),
-      role === "super-admin"
-        ? getReport(dailyFilters, officeCode, controller.signal)
-        : Promise.resolve(null),
+      getReport(dailyFilters, officeCode, controller.signal),
       role === "team-leader"
         ? Promise.allSettled(
             roster.map(async (person) => ({
@@ -280,6 +298,7 @@ export default function CrmDashboardClient({
         if (controller.signal.aborted) return;
         setReport(main);
         setTodayReport(daily);
+        setReportAsOf(Date.now());
         if (role === "team-leader") {
           const results = rows as PromiseSettledResult<Performance>[];
           setPerformance(
@@ -307,8 +326,37 @@ export default function CrmDashboardClient({
     return () => controller.abort();
   }, [filters, role, roster, officeCode]);
 
+  // A history restoration must recheck Payload auth before exposing cached CRM data.
+  useEffect(() => {
+    const shell = document.querySelector<HTMLElement>(".crm-shell");
+    const onPageHide = () => shell?.classList.add("crm-shell--session-hidden");
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      void fetch("/api/users/me", { credentials: "same-origin", cache: "no-store" })
+        .then(async (response) => {
+          const result = response.ok ? await response.json() as { user?: { id?: string | number } | null } : null;
+          if (!isCurrentCrmSession(result, userId)) {
+            window.location.replace("/admin/login");
+            return;
+          }
+          shell?.classList.remove("crm-shell--session-hidden");
+        })
+        .catch(() => window.location.replace("/admin/login"));
+    };
+    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, [userId]);
+
   const rows = useMemo(() => {
-    const source = report?.table.rows || [];
+    const source = leadRowsForKpi(
+      (kpiView === "today" ? todayReport : report)?.table.rows || [],
+      kpiView,
+      reportAsOf,
+    );
     const term = search.trim().toLocaleLowerCase();
     const matched = term
       ? source.filter((row) =>
@@ -319,7 +367,7 @@ export default function CrmDashboardClient({
     if (sort === "name")
       matched.sort((a, b) => (a[1] || "").localeCompare(b[1] || ""));
     return matched;
-  }, [report, search, sort]);
+  }, [report, todayReport, reportAsOf, kpiView, search, sort]);
   const pageCount = Math.max(1, Math.ceil(rows.length / 8));
   const visibleRows = rows.slice((page - 1) * 8, page * 8);
   const title =
@@ -334,6 +382,9 @@ export default function CrmDashboardClient({
       : role === "team-leader"
         ? `An accurate view of your authorized ${officeName} office.`
         : `A clear view of ${officeName} sales activity and conversion.`;
+  const scope = { role, officeId, teamId, userId };
+  const contactURL = crmKpiCollectionURL("contacts", scope);
+  const salespeopleURL = crmKpiCollectionURL("salespeople", scope);
 
   function applyFilters(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -343,10 +394,30 @@ export default function CrmDashboardClient({
     )
       return;
     setPage(1);
+    setKpiView(null);
     setLoading(true);
     setError("");
     setPerformanceError(false);
     setFilters({ ...draft });
+  }
+
+  function openLeadKpi(view: LeadKpiView) {
+    setKpiView(view);
+    setSearch("");
+    setPage(1);
+  }
+
+  async function logOut() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setLogoutError("");
+    try {
+      await endCrmSession(fetch);
+      window.location.replace("/admin/login");
+    } catch {
+      setLogoutError("Logout could not be completed. Please try again.");
+      setLoggingOut(false);
+    }
   }
 
   async function assignBacklog() {
@@ -473,22 +544,30 @@ export default function CrmDashboardClient({
               <strong>Dashboard</strong>
             </div>
           </div>
-          <div className="crm-topbar__user">
-            <div className="crm-topbar__avatar">
-              <LuUserRound aria-hidden="true" />
+          <div className="crm-topbar__actions">
+            <div className="crm-topbar__user">
+              <div className="crm-topbar__avatar">
+                <LuUserRound aria-hidden="true" />
+              </div>
+              <div>
+                <strong>{name}</strong>
+                <span>
+                  {role === "super-admin"
+                    ? "Master Admin"
+                    : role === "team-leader"
+                      ? "Team Leader"
+                      : "Salesperson"}
+                </span>
+              </div>
             </div>
-            <div>
-              <strong>{name}</strong>
-              <span>
-                {role === "super-admin"
-                  ? "Master Admin"
-                  : role === "team-leader"
-                    ? "Team Leader"
-                    : "Salesperson"}
-              </span>
-            </div>
+            {role !== "super-admin" && (
+              <button className="crm-topbar__logout" type="button" onClick={logOut} disabled={loggingOut}>
+                <LuLogOut aria-hidden="true" /> {loggingOut ? "Logging out…" : "Logout"}
+              </button>
+            )}
           </div>
         </header>
+        {logoutError && <p className="crm-logout-error" role="alert">{logoutError}</p>}
         <main className="crm-content" id="crm-overview">
           <div className="crm-page-heading">
             <div>
@@ -686,32 +765,40 @@ export default function CrmDashboardClient({
                   }
                   value={report.summary.total}
                   note="Selected period"
+                  href="#crm-leads-section"
+                  onClick={() => openLeadKpi("total")}
                 />
-                {role === "super-admin" && (
-                  <Kpi
-                    icon={LuCalendarDays}
-                    label="Today's leads"
-                    value={todayReport?.summary.total ?? "—"}
-                    note={todayIST()}
-                  />
-                )}
+                <Kpi
+                  icon={LuCalendarDays}
+                  label="Today's leads"
+                  value={todayReport?.summary.total ?? "—"}
+                  note={todayIST()}
+                  href="#crm-leads-section"
+                  onClick={() => openLeadKpi("today")}
+                />
                 <Kpi
                   icon={LuActivity}
                   label="New leads"
                   value={statusCount(report.summary, "new")}
                   note="Awaiting first contact"
+                  href="#crm-leads-section"
+                  onClick={() => openLeadKpi("new")}
                 />
                 <Kpi
                   icon={LuTarget}
                   label="Converted leads"
                   value={report.summary.converted}
                   note="Status: converted"
+                  href="#crm-leads-section"
+                  onClick={() => openLeadKpi("converted")}
                 />
                 <Kpi
                   icon={LuCalendarDays}
                   label="Pending follow-ups"
                   value={report.summary.followUps.upcoming}
                   note="Scheduled, not overdue"
+                  href="#crm-leads-section"
+                  onClick={() => openLeadKpi("pending")}
                 />
                 <Kpi
                   icon={LuCalendarDays}
@@ -719,21 +806,25 @@ export default function CrmDashboardClient({
                   value={report.summary.followUps.overdue}
                   note="Requires attention"
                   tone="urgent"
+                  href="#crm-leads-section"
+                  onClick={() => openLeadKpi("overdue")}
                 />
-                {role !== "salesperson" && (
+                {salespeopleURL && (
                   <Kpi
                     icon={LuUsers}
                     label="Active salespeople"
                     value={roster.filter((person) => person.active).length}
                     note={`${officeName} office roster`}
+                    href={salespeopleURL}
                   />
                 )}
-                {role === "super-admin" && (
+                {contactURL && (
                   <Kpi
                     icon={LuMail}
-                    label="Contact messages (all)"
+                    label="Contact messages"
                     value={contactCount}
                     note={`All dates · ${officeName}`}
+                    href={contactURL}
                   />
                 )}
                 <Kpi
@@ -741,6 +832,8 @@ export default function CrmDashboardClient({
                   label="Conversion rate"
                   value={pct(report.summary.conversionRate)}
                   note="Converted ÷ total leads"
+                  href="#crm-leads-section"
+                  onClick={() => openLeadKpi("conversion")}
                 />
               </div>
 
@@ -934,6 +1027,7 @@ export default function CrmDashboardClient({
 
               <section
                 className="crm-leads-section"
+                id="crm-leads-section"
                 aria-labelledby="crm-leads-heading"
               >
                 <div className="crm-section-title">
@@ -946,12 +1040,18 @@ export default function CrmDashboardClient({
                     </h2>
                   </div>
                   <Link
-                    href="/admin/collections/central-leads"
+                    href={`/admin/collections/central-leads?where%5Boffice%5D%5Bequals%5D=${encodeURIComponent(officeId)}`}
                     className="crm-text-link"
                   >
                     Open lead workspace <LuArrowRight aria-hidden="true" />
                   </Link>
                 </div>
+                {kpiView && (
+                  <div className="crm-kpi-selection" role="status">
+                    <span>Showing {kpiViewLabels[kpiView]} · {kpiView === "today" ? todayReport?.window.label : report.window.label}</span>
+                    <button type="button" onClick={() => { setKpiView(null); setPage(1); }}>Clear KPI filter</button>
+                  </div>
+                )}
                 <div className="crm-table-card">
                   <div className="crm-table-card__head">
                     <label className="crm-search">
@@ -1183,15 +1283,19 @@ function Kpi({
   value,
   note,
   tone,
+  href,
+  onClick,
 }: {
   icon: IconType;
   label: string;
   value: string | number;
   note: string;
   tone?: "urgent";
+  href: string;
+  onClick?: () => void;
 }) {
   return (
-    <div className={`crm-kpi${tone ? ` crm-kpi--${tone}` : ""}`}>
+    <Link href={href} onClick={onClick} className={`crm-kpi${tone ? ` crm-kpi--${tone}` : ""}`} aria-label={`Open ${label}`}>
       <div className="crm-kpi__top">
         <span>{label}</span>
         <div className="crm-kpi__icon">
@@ -1202,7 +1306,7 @@ function Kpi({
         {typeof value === "number" ? value.toLocaleString("en-IN") : value}
       </strong>
       <small>{note}</small>
-    </div>
+    </Link>
   );
 }
 function ChartHeading({

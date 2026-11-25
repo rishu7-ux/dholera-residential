@@ -6,8 +6,6 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build",
-    "build:test": "node --import tsx scripts/build-isolated.mjs",
-    "dev:test": "node --import tsx scripts/dev-test.mjs",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit --incremental false",
@@ -16,13 +14,7 @@
     "test:assignment": "tsx --test tests/leads/assignment.test.ts",
     "test:mongodb-target": "node --import tsx --test tests/leads/mongodb-test-target.test.ts",
     "test:qualification:integration": "node --import tsx tests/leads/qualification.integration.ts",
-    "test:assignment:integration": "node --import tsx tests/leads/assignment.integration.ts",
-    "test:crm:integration": "node --import tsx tests/leads/crm.integration.ts",
-    "test:crm:manual-onboarding": "node --import tsx tests/leads/superadmin-manual-onboarding.integration.ts",
-    "test:crm:cleanup": "node --import tsx tests/leads/crm-cleanup.integration.ts",
-    "test:noida-onboarding": "node --import tsx --test tests/leads/noida-roster.test.ts tests/leads/password-setup-email.test.ts tests/leads/smtp-email-config.test.ts",
-    "test:crm:restart": "node --import tsx scripts/crm-restart-persistence-test.mjs",
-    "test:website:browser": "node --import tsx scripts/noida-website-browser-test.mjs"
+    "test:assignment:integration": "node --import tsx tests/leads/assignment.integration.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",

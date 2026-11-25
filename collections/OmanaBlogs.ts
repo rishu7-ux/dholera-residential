@@ -1,4 +1,5 @@
 import type { CollectionConfig } from "payload";
+import { crmContentHidden, isSuperAdmin, superAdminOnly } from "../lib/crm/access";
 import {
   BoldFeature,
   FixedToolbarFeature,
@@ -45,20 +46,16 @@ export const OmanaBlogs: CollectionConfig = {
   admin: {
     useAsTitle: "title",
     group: "Omana Projects",
+    hidden: crmContentHidden,
     defaultColumns: ["title", "category", "slug", "status", "publishedAt", "createdAt"],
   },
   access: {
-    read: ({ req }) =>
-      req.user
-        ? true
-        : {
-            status: {
-              equals: "published",
-            },
-          },
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => Boolean(req.user),
+    read: ({ req }) => isSuperAdmin(req.user as { role?: string } | null)
+      ? true
+      : { status: { equals: "published" } },
+    create: superAdminOnly,
+    update: superAdminOnly,
+    delete: superAdminOnly,
   },
   hooks: {
     afterChange: [
